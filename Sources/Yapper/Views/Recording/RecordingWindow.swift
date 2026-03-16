@@ -71,10 +71,17 @@ struct RecordingWindowContent: View {
 
             // Content
             VStack(spacing: 0) {
-                waveformArea
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
-                    .padding(.bottom, 12)
+                if coordinator.state == .processing || coordinator.state == .transcribing {
+                    processingOverlay
+                        .padding(.horizontal, 20)
+                        .padding(.top, 18)
+                        .padding(.bottom, 12)
+                } else {
+                    waveformArea
+                        .padding(.horizontal, 20)
+                        .padding(.top, 18)
+                        .padding(.bottom, 12)
+                }
 
                 Rectangle()
                     .fill(separatorColor)
@@ -201,6 +208,40 @@ struct RecordingWindowContent: View {
         newLevels.append(baseLevel * variation)
 
         waveformLevels = newLevels
+    }
+
+    // MARK: - Processing Overlay
+
+    @State private var brainOpacity: Double = 0.3
+
+    private var processingOverlay: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "brain")
+                .font(.system(size: 24))
+                .foregroundColor(coordinator.state == .processing ? .purple : .blue)
+                .opacity(brainOpacity)
+                .onAppear {
+                    withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                        brainOpacity = 1.0
+                    }
+                }
+                .onDisappear {
+                    brainOpacity = 0.3
+                }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(coordinator.state == .transcribing ? "Transcribing..." : "Thinking...")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.primary)
+
+                Text(coordinator.state == .transcribing ? "Converting speech to text" : "Processing with AI")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+        .frame(height: 65)
     }
 
     // MARK: - Bottom Toolbar

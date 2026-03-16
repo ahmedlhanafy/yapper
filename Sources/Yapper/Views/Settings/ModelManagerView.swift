@@ -32,7 +32,7 @@ struct ModelManagerView: View {
             HStack {
                 Image(systemName: "info.circle")
                     .foregroundColor(.blue)
-                Text("Models are stored in ~/Documents/Yapper/Models")
+                Text("Models are stored in ~/Library/Application Support/Yapper/Models")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

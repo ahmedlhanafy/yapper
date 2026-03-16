@@ -13,67 +13,79 @@ struct HistoryView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        HStack(spacing: 0) {
+            // List
             VStack(spacing: 0) {
-                // Search bar
-                HStack {
+                // Search
+                HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
-                    TextField("Search transcripts...", text: $searchText)
+                        .font(.system(size: 12))
+                    TextField("Search...", text: $searchText)
                         .textFieldStyle(.plain)
+                        .font(.system(size: 13))
                 }
-                .padding(8)
-                .background(.quaternary.opacity(0.5))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color(nsColor: .quaternaryLabelColor).opacity(0.3))
+                .cornerRadius(6)
+                .padding(10)
 
-                // Sessions list
-                List(filteredSessions, id: \.id, selection: $selectedSessionID) { session in
-                    SessionRow(session: session)
-                        .tag(session.id)
+                Divider()
+
+                if filteredSessions.isEmpty {
+                    Spacer()
+                    Text(sessions.isEmpty ? "No recordings yet" : "No matches")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 1) {
+                            ForEach(filteredSessions) { session in
+                                SessionRow(
+                                    session: session,
+                                    isSelected: selectedSessionID == session.id
+                                )
+                                .onTapGesture { selectedSessionID = session.id }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
                 }
-                .listStyle(.sidebar)
             }
-            .navigationSplitViewColumnWidth(min: 250, ideal: 300)
-        } detail: {
+            .frame(width: 260)
+            .background(Color(nsColor: .controlBackgroundColor))
+
+            Divider()
+
+            // Detail
             if let session = selectedSession {
                 SessionDetailView(
                     session: session,
-                    onReprocess: { mode in
-                        Task {
-                            await RecordingCoordinator.shared.reprocess(session: session, withMode: mode)
-                        }
-                    },
                     onPlay: { playAudio(session) },
+                    onReprocess: { mode in
+                        Task { await RecordingCoordinator.shared.reprocess(session: session, withMode: mode) }
+                    },
                     onDelete: { deleteSession(session) }
                 )
-                .navigationTitle(formatDate(session.timestamp))
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: 8) {
                     Image(systemName: "waveform")
-                        .font(.system(size: 60))
-                        .foregroundColor(.secondary)
-                    Text("Select a session to view details")
+                        .font(.system(size: 36))
+                        .foregroundColor(.secondary.opacity(0.6))
+                    Text("Select a recording")
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(minWidth: 700, minHeight: 500)
-        .onAppear {
-            loadSessions()
-        }
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        .onAppear { loadSessions() }
     }
 
     private var filteredSessions: [Session] {
-        if searchText.isEmpty {
-            return sessions
-        }
+        if searchText.isEmpty { return sessions }
         return sessions.filter { $0.matches(searchText: searchText) }
     }
 
@@ -83,13 +95,11 @@ struct HistoryView: View {
 
     private func playAudio(_ session: Session) {
         let url = URL(fileURLWithPath: session.audioFilePath)
-
         do {
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.play()
-            print("▶️ Playing audio")
         } catch {
-            print("⚠️ Failed to play audio: \(error)")
+            print("Failed to play audio: \(error)")
         }
     }
 
@@ -105,31 +115,39 @@ struct HistoryView: View {
 
 struct SessionRow: View {
     let session: Session
+    let isSelected: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             HStack {
                 Text(session.mode.name)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
 
                 Spacer()
 
-                Text(formatTime(session.timestamp))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text(timeAgo(session.timestamp))
+                    .font(.system(size: 11))
+                    .foregroundColor(isSelected ? .white.opacity(0.7) : .secondary.opacity(0.6))
             }
 
             Text(session.rawTranscript)
-                .font(.body)
+                .font(.system(size: 13))
+                .foregroundColor(isSelected ? .white : .primary)
                 .lineLimit(2)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isSelected ? Color.accentColor : Color.clear)
+        )
+        .padding(.horizontal, 6)
     }
 
-    private func formatTime(_ date: Date) -> String {
+    private func timeAgo(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
+        formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
@@ -138,8 +156,8 @@ struct SessionRow: View {
 
 struct SessionDetailView: View {
     let session: Session
-    let onReprocess: (Mode) -> Void
     let onPlay: () -> Void
+    let onReprocess: (Mode) -> Void
     let onDelete: () -> Void
 
     @State private var showingDebug = false
@@ -147,170 +165,134 @@ struct SessionDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 // Header
-                HStack {
-                    VStack(alignment: .leading) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(formatDate(session.timestamp))
-                            .font(.title2)
-                            .fontWeight(.bold)
-
+                            .font(.system(size: 15, weight: .semibold))
                         Text(session.mode.name)
-                            .font(.subheadline)
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
 
                     Spacer()
 
-                    // Actions
-                    HStack {
+                    HStack(spacing: 12) {
                         Button(action: onPlay) {
-                            Image(systemName: "play.circle")
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 11))
                         }
                         .buttonStyle(.borderless)
                         .help("Play audio")
 
                         Button(action: { showingReprocessSheet = true }) {
                             Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 11))
                         }
                         .buttonStyle(.borderless)
-                        .help("Reprocess with different mode")
+                        .help("Reprocess")
 
                         Button(action: onDelete) {
                             Image(systemName: "trash")
+                                .font(.system(size: 11))
                         }
                         .buttonStyle(.borderless)
                         .foregroundColor(.red)
                         .help("Delete")
                     }
-                    .font(.title3)
                 }
 
                 Divider()
 
                 // Transcript
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Transcript")
-                        .font(.headline)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
 
-                    SelectableText(text: session.rawTranscript)
+                    Text(session.rawTranscript)
+                        .font(.system(size: 13))
                         .textSelection(.enabled)
-                        .padding()
-                        .background(.quaternary)
-                        .cornerRadius(8)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(nsColor: .quaternaryLabelColor).opacity(0.2))
+                        .cornerRadius(6)
                 }
 
-                // Processed output (if available)
+                // Processed output
                 if let processed = session.processedOutput {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Processed Output")
-                            .font(.headline)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Processed")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.secondary)
 
-                        SelectableText(text: processed)
+                        Text(processed)
+                            .font(.system(size: 13))
                             .textSelection(.enabled)
-                            .padding()
-                            .background(.quaternary)
-                            .cornerRadius(8)
-                    }
-                }
-
-                // Context (if available)
-                if let context = session.capturedContext {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Context")
-                            .font(.headline)
-
-                        if let app = context.activeApp {
-                            HStack {
-                                Text("App:")
-                                    .foregroundColor(.secondary)
-                                Text(app.name)
-                            }
-                            .font(.caption)
-                        }
-
-                        if let selection = context.selection {
-                            Text("Selection: \(selection.prefix(100))...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        if let clipboard = context.clipboard {
-                            Text("Clipboard: \(clipboard.prefix(100))...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(nsColor: .quaternaryLabelColor).opacity(0.2))
+                            .cornerRadius(6)
                     }
                 }
 
                 // Metadata
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Metadata")
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Details")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
 
-                    HStack {
-                        Text("Duration:")
+                    Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
+                        GridRow {
+                            Text("Duration")
+                                .foregroundColor(.secondary.opacity(0.6))
+                            Text(String(format: "%.1fs", session.duration))
+                        }
+                        if let language = session.language {
+                            GridRow {
+                                Text("Language")
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                Text(language)
+                            }
+                        }
+                        if let time = session.processingTime, time > 0 {
+                            GridRow {
+                                Text("Processing")
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                Text(String(format: "%.2fs", time))
+                            }
+                        }
+                        if let provider = session.aiProvider {
+                            GridRow {
+                                Text("Provider")
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                Text("\(provider)\(session.aiModel.map { " / \($0)" } ?? "")")
+                            }
+                        }
+                    }
+                    .font(.system(size: 12))
+                }
+
+                // Context
+                if let context = session.capturedContext,
+                   (context.activeApp != nil || context.selection != nil || context.clipboard != nil) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Context")
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.secondary)
-                        Text(String(format: "%.1f seconds", session.duration))
-                    }
-                    .font(.caption)
 
-                    if let language = session.language {
-                        HStack {
-                            Text("Language:")
-                                .foregroundColor(.secondary)
-                            Text(language)
+                        if let app = context.activeApp {
+                            Text(app.name)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary.opacity(0.6))
                         }
-                        .font(.caption)
-                    }
-
-                    if let processingTime = session.processingTime {
-                        HStack {
-                            Text("Processing Time:")
-                                .foregroundColor(.secondary)
-                            Text(String(format: "%.2f seconds", processingTime))
-                        }
-                        .font(.caption)
                     }
                 }
-
-                // Debug info
-                if showingDebug {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Debug Info")
-                            .font(.headline)
-
-                        if let prompt = session.aiPrompt {
-                            Text("Prompt:")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(prompt)
-                                .font(.caption.monospaced())
-                                .textSelection(.enabled)
-                                .padding()
-                                .background(.quaternary)
-                                .cornerRadius(8)
-                        }
-
-                        if let provider = session.aiProvider, let model = session.aiModel {
-                            Text("Model: \(provider) / \(model)")
-                                .font(.caption)
-                        }
-
-                        Text("Audio Path: \(session.audioFilePath)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Button(showingDebug ? "Hide Debug Info" : "Show Debug Info") {
-                    showingDebug.toggle()
-                }
-                .buttonStyle(.borderless)
-                .font(.caption)
             }
-            .padding()
+            .padding(20)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showingReprocessSheet) {
             ReprocessSheet(session: session, onReprocess: onReprocess)
         }
@@ -334,30 +316,25 @@ struct ReprocessSheet: View {
     @State private var selectedMode: Mode?
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             Text("Reprocess with Mode")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.headline)
 
             List(AppState.shared.settings.modes, id: \.id, selection: $selectedMode) { mode in
                 VStack(alignment: .leading) {
                     Text(mode.name)
-                        .font(.headline)
+                        .font(.system(size: 13, weight: .medium))
                     Text(mode.aiEnabled ? "AI Enabled" : "Voice Only")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            .frame(height: 300)
+            .frame(height: 250)
 
             HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .keyboardShortcut(.escape)
-
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.escape)
                 Spacer()
-
                 Button("Reprocess") {
                     if let mode = selectedMode {
                         onReprocess(mode)
@@ -366,10 +343,11 @@ struct ReprocessSheet: View {
                 }
                 .disabled(selectedMode == nil)
                 .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding()
-        .frame(width: 400)
+        .frame(width: 350)
     }
 }
 
@@ -392,9 +370,7 @@ struct SelectableText: NSViewRepresentable {
     }
 }
 
-// MARK: - Preview
-
 #Preview {
     HistoryView()
-        .frame(width: 900, height: 600)
+        .frame(width: 700, height: 500)
 }

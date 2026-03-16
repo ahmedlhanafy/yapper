@@ -29,15 +29,9 @@ cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/"
 echo "📋 Copying Info.plist..."
 cp "$PROJECT_DIR/Sources/Yapper/Resources/Info.plist" "$APP_BUNDLE/Contents/"
 
-# Step 5: Compile and copy Assets.xcassets
-echo "🎨 Compiling assets..."
-xcrun actool "$PROJECT_DIR/Sources/Yapper/Resources/Assets.xcassets" \
-    --compile "$APP_BUNDLE/Contents/Resources" \
-    --platform macosx \
-    --minimum-deployment-target 13.0 \
-    --app-icon AppIcon \
-    --output-partial-info-plist "$APP_BUNDLE/Contents/Resources/Assets.plist" \
-    2>/dev/null || echo "Warning: actool had issues, continuing..."
+# Step 5: Copy app icon
+echo "🎨 Copying app icon..."
+cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 
 # Step 6: Copy dylibs to Frameworks
 echo "📚 Copying libraries..."
@@ -117,18 +111,20 @@ fi
 # Step 10: Create PkgInfo
 echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
-# Step 11: Code sign the app (ad-hoc signing for local use)
-echo "🔐 Code signing..."
+# Step 11: Code sign the app with Yapper Dev certificate
+SIGN_IDENTITY="9985842FC8FB705467E2FBEC63F591057CB2F9D6"
+echo "🔐 Code signing with '$SIGN_IDENTITY'..."
 
 # Sign frameworks first
 for dylib in "$FRAMEWORKS_DIR"/*.dylib; do
     if [ -f "$dylib" ]; then
-        codesign --force --sign - "$dylib"
+        codesign --force --sign "$SIGN_IDENTITY" "$dylib"
     fi
 done
 
 # Sign the main app with entitlements
-codesign --force --sign - \
+codesign --force --sign "$SIGN_IDENTITY" \
+    --identifier "com.yapper.app" \
     --entitlements "$PROJECT_DIR/Yapper.entitlements" \
     --deep \
     "$APP_BUNDLE"

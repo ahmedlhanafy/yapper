@@ -130,6 +130,17 @@ class RecordingCoordinator: ObservableObject {
 
             print("✓ Transcription: \(transcription.text)")
 
+            // Check for blank audio
+            let trimmed = transcription.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed == "[BLANK_AUDIO]" || trimmed == "(blank audio)" || trimmed == "[silence]" {
+                print("⏭️ Blank audio detected, skipping")
+                await MainActor.run {
+                    state = .idle
+                    UserNotificationService.shared.showToast("No speech detected")
+                }
+                return
+            }
+
             // Step 2: Merge start context with app context (captured now)
             var capturedContext: CapturedContext? = startContext ?? CapturedContext()
 
@@ -222,7 +233,9 @@ class RecordingCoordinator: ObservableObject {
 
             // Provide user-friendly error message based on error type
             let userMessage: String
-            if let whisperError = error as? WhisperError {
+            if let ollamaError = error as? OllamaError {
+                userMessage = ollamaError.errorDescription ?? ErrorMessages.aiProcessingFailed(error)
+            } else if let whisperError = error as? WhisperError {
                 userMessage = ErrorMessages.transcriptionFailed(error)
             } else if let insertError = error as? TextInsertionError {
                 userMessage = ErrorMessages.textInsertionFailed(error)

@@ -73,6 +73,7 @@ class UserNotificationService {
 
     /// Show toast-style notification (inline)
     func showToast(_ message: String) {
+        guard AppState.shared.settings.showToastNotifications else { return }
         DispatchQueue.main.async {
             // Create a simple floating window for toast
             let window = NSWindow(

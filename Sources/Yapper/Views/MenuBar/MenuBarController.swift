@@ -37,12 +37,14 @@ class MenuBarController {
         )
         recordItem.keyEquivalentModifierMask = [.command, .shift]
         recordItem.target = self
+        recordItem.image = NSImage(systemSymbolName: "record.circle", accessibilityDescription: nil)
         menu.addItem(recordItem)
 
         menu.addItem(NSMenuItem.separator())
 
         // Modes submenu
         let modesItem = NSMenuItem(title: "Mode", action: nil, keyEquivalent: "")
+        modesItem.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         let modesSubmenu = NSMenu()
 
         for mode in AppState.shared.settings.modes {
@@ -69,6 +71,7 @@ class MenuBarController {
             keyEquivalent: "h"
         )
         historyItem.target = self
+        historyItem.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
         menu.addItem(historyItem)
 
         // Settings
@@ -78,6 +81,7 @@ class MenuBarController {
             keyEquivalent: ","
         )
         settingsItem.target = self
+        settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settingsItem)
 
         menu.addItem(NSMenuItem.separator())
@@ -163,7 +167,7 @@ class MenuBarController {
     }
 
     @objc private func openHistory() {
-        HistoryWindow.show()
+        SettingsWindow.show(tab: .history)
     }
 
     @objc private func openSettings() {
@@ -173,46 +177,31 @@ class MenuBarController {
 
 // MARK: - Window Helpers
 
-class HistoryWindow {
-    static private var window: NSWindow?
-
-    static func show() {
-        if let existing = window {
-            existing.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        let hostingController = NSHostingController(rootView: HistoryView())
-        let window = NSWindow(contentViewController: hostingController)
-
-        window.title = "History"
-        window.setContentSize(NSSize(width: 800, height: 600))
-        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        window.center()
-
-        self.window = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-}
-
 class SettingsWindow {
     static private var window: NSWindow?
+    static private var settingsView: SettingsView?
 
-    static func show() {
+    static func show(tab: SettingsView.Tab? = nil) {
         if let existing = window {
+            if let tab = tab {
+                settingsView?.selectedTab = tab
+            }
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
-        let hostingController = NSHostingController(rootView: SettingsView())
+        let view = SettingsView(initialTab: tab ?? .general)
+        settingsView = view
+        let hostingController = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hostingController)
 
         window.title = "Settings"
-        window.setContentSize(NSSize(width: 600, height: 500))
-        window.styleMask = [.titled, .closable, .resizable]
+        window.setContentSize(NSSize(width: 700, height: 500))
+        window.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.toolbarStyle = .unified
         window.center()
 
         self.window = window

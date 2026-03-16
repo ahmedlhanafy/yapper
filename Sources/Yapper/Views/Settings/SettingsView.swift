@@ -1,8 +1,26 @@
 import SwiftUI
+import AVFoundation
+
+class SettingsViewState: ObservableObject {
+    @Published var selectedTab: SettingsView.Tab?
+
+    init(tab: SettingsView.Tab = .general) {
+        self.selectedTab = tab
+    }
+}
 
 struct SettingsView: View {
     @ObservedObject var appState = AppState.shared
-    @State private var selectedTab: Tab? = .general
+    @ObservedObject private var viewState: SettingsViewState
+
+    var selectedTab: SettingsView.Tab? {
+        get { viewState.selectedTab }
+        nonmutating set { viewState.selectedTab = newValue }
+    }
+
+    init(initialTab: Tab = .general) {
+        self._viewState = ObservedObject(wrappedValue: SettingsViewState(tab: initialTab))
+    }
 
     enum Tab: String, CaseIterable, Identifiable {
         case general = "General"
@@ -11,39 +29,116 @@ struct SettingsView: View {
         case audio = "Audio"
         case apiKeys = "API Keys"
         case advanced = "Advanced"
+        case history = "History"
 
         var id: String { rawValue }
 
         var icon: String {
             switch self {
-            case .general: return "gearshape"
-            case .shortcuts: return "keyboard"
+            case .general: return "gearshape.fill"
+            case .shortcuts: return "keyboard.fill"
             case .modes: return "sparkles"
             case .audio: return "waveform"
-            case .apiKeys: return "key"
+            case .apiKeys: return "key.fill"
             case .advanced: return "slider.horizontal.3"
+            case .history: return "clock.arrow.circlepath"
+            }
+        }
+
+        var iconColor: Color {
+            switch self {
+            case .general: return .gray
+            case .shortcuts: return .blue
+            case .modes: return .purple
+            case .audio: return .orange
+            case .apiKeys: return .green
+            case .advanced: return .pink
+            case .history: return .red
             }
         }
     }
 
     var body: some View {
-        NavigationSplitView {
-            List(Tab.allCases, selection: $selectedTab) { tab in
-                Label(tab.rawValue, systemImage: tab.icon)
-                    .tag(tab)
+        HStack(spacing: 0) {
+            // Sidebar
+            VStack(alignment: .leading, spacing: 0) {
+                // Spacer for traffic light area
+                Spacer()
+                    .frame(height: 38)
+
+                VStack(spacing: 2) {
+                    ForEach(Tab.allCases) { tab in
+                        sidebarRow(tab)
+                    }
+                }
+                .padding(.horizontal, 12)
+
+                Spacer()
             }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-        } detail: {
-            if let tab = selectedTab {
-                contentView(for: tab)
-                    .navigationTitle(tab.rawValue)
-            } else {
-                Text("Select a category")
-                    .foregroundColor(.secondary)
+            .frame(width: 190)
+            .background(Color(nsColor: .windowBackgroundColor))
+
+            // Divider
+            Rectangle()
+                .fill(Color(nsColor: .separatorColor))
+                .frame(width: 1)
+
+            // Content
+            VStack(spacing: 0) {
+                // Titlebar spacer to match sidebar
+                Spacer()
+                    .frame(height: 38)
+
+                Divider()
+
+                // Content area
+                if let tab = selectedTab {
+                    contentView(for: tab)
+                } else {
+                    Spacer()
+                    Text("Select a category")
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .controlBackgroundColor))
         }
-        .frame(minWidth: 650, minHeight: 500)
+        .frame(minWidth: 700, minHeight: 500)
+        .edgesIgnoringSafeArea(.top)
+        .onExitCommand {
+            NSApp.keyWindow?.close()
+        }
+    }
+
+    private func sidebarRow(_ tab: Tab) -> some View {
+        Button {
+            selectedTab = tab
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(tab.iconColor)
+                    )
+
+                Text(tab.rawValue)
+                    .font(.system(size: 13))
+                    .foregroundColor(selectedTab == tab ? .primary : .secondary)
+
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(selectedTab == tab ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.15) : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -61,6 +156,8 @@ struct SettingsView: View {
             APIKeysSettingsView()
         case .advanced:
             AdvancedSettingsView()
+        case .history:
+            HistoryView()
         }
     }
 }
@@ -74,6 +171,15 @@ struct GeneralSettingsView: View {
         Form {
             Section("Startup") {
                 Toggle("Start at login", isOn: $appState.settings.startAtLogin)
+                Toggle("Show in Dock", isOn: Binding(
+                    get: { appState.settings.showInDock },
+                    set: { show in
+                        appState.settings.showInDock = show
+                        appState.saveSettings()
+                        NSApp.setActivationPolicy(show ? .regular : .accessory)
+                    }
+                ))
+                .help("Show Yapper icon in the Dock. When hidden, use the menubar icon.")
             }
 
             Section("Interface") {
@@ -93,6 +199,9 @@ struct GeneralSettingsView: View {
 
                 Toggle("Record on menubar click", isOn: $appState.settings.recordOnMenubarClick)
                     .help("When enabled, clicking the menubar icon starts/stops recording. Right-click for menu.")
+
+                Toggle("Show toast notifications", isOn: $appState.settings.showToastNotifications)
+                    .help("Show popup notifications for events like errors, blank audio, and text insertion.")
             }
 
             Section("Recording Window") {
@@ -192,8 +301,8 @@ struct ShortcutsSettingsView: View {
 struct ModesSettingsView: View {
     @ObservedObject var appState = AppState.shared
     @State private var selectedModeID: UUID?
-    @State private var showingModeEditor = false
     @State private var modeToEdit: Mode?
+    @State private var showingNewModeEditor = false
     @State private var showingDeleteConfirmation = false
 
     private var selectedMode: Mode? {
@@ -264,8 +373,11 @@ struct ModesSettingsView: View {
             }
             .padding()
         }
-        .sheet(isPresented: $showingModeEditor) {
-            ModeEditorView(mode: modeToEdit)
+        .sheet(item: $modeToEdit) { mode in
+            ModeEditorView(mode: mode)
+        }
+        .sheet(isPresented: $showingNewModeEditor) {
+            ModeEditorView()
         }
         .alert("Delete Mode", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -282,13 +394,11 @@ struct ModesSettingsView: View {
     }
 
     private func createNewMode() {
-        modeToEdit = nil
-        showingModeEditor = true
+        showingNewModeEditor = true
     }
 
     private func editMode(_ mode: Mode) {
         modeToEdit = mode
-        showingModeEditor = true
     }
 
     private func duplicateMode(_ mode: Mode) {
@@ -327,7 +437,9 @@ struct ModesSettingsView: View {
 
 struct AudioSettingsView: View {
     @ObservedObject var appState = AppState.shared
-    @ObservedObject var audioEngine = AudioEngine.shared
+    @State private var devices: [(id: String, name: String)] = []
+    @State private var permissionGranted = false
+    @State private var loaded = false
 
     var body: some View {
         Form {
@@ -335,7 +447,7 @@ struct AudioSettingsView: View {
                 Picker("Microphone:", selection: $appState.settings.inputDevice) {
                     Text("Default").tag(nil as String?)
 
-                    ForEach(audioEngine.availableInputDevices(), id: \.id) { device in
+                    ForEach(devices, id: \.id) { device in
                         Text(device.name).tag(device.id as String?)
                     }
                 }
@@ -346,18 +458,19 @@ struct AudioSettingsView: View {
 
             Section("Permissions") {
                 HStack {
-                    Image(systemName: audioEngine.permissionStatus == .granted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(audioEngine.permissionStatus == .granted ? .green : .red)
+                    Image(systemName: permissionGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(permissionGranted ? .green : .red)
 
                     Text("Microphone Access:")
-                    Text(audioEngine.permissionStatus == .granted ? "Granted" : "Not Granted")
+                    Text(permissionGranted ? "Granted" : "Not Granted")
                         .foregroundColor(.secondary)
 
                     Spacer()
 
-                    if audioEngine.permissionStatus != .granted {
+                    if !permissionGranted {
                         Button("Request") {
-                            audioEngine.requestPermissions()
+                            AudioEngine.shared.requestPermissions()
+                            permissionGranted = AudioEngine.shared.permissionStatus == .granted
                         }
                     }
                 }
@@ -365,6 +478,17 @@ struct AudioSettingsView: View {
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            permissionGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+            DispatchQueue.global(qos: .userInitiated).async {
+                let found = AudioEngine.shared.availableInputDevices()
+                DispatchQueue.main.async {
+                    devices = found
+                }
+            }
+        }
     }
 }
 
@@ -373,57 +497,207 @@ struct AudioSettingsView: View {
 struct APIKeysSettingsView: View {
     @State private var openaiKey = ""
     @State private var anthropicKey = ""
-    @State private var showingSaved = false
+    @ObservedObject private var ollama = OllamaService.shared
+    @ObservedObject private var appState = AppState.shared
+
+    private var hasOpenAIKey: Bool { StorageManager.shared.loadAPIKey(for: .openai) != nil }
+    private var hasAnthropicKey: Bool { StorageManager.shared.loadAPIKey(for: .anthropic) != nil }
 
     var body: some View {
-        Form {
-            Section("OpenAI") {
-                SecureField("API Key", text: $openaiKey)
-                    .textFieldStyle(.roundedBorder)
+        ScrollView {
+            VStack(spacing: 16) {
+                // OpenAI
+                ProviderCard(
+                    name: "OpenAI",
+                    icon: "brain",
+                    color: .green,
+                    isConnected: hasOpenAIKey,
+                    description: "GPT-4 and other OpenAI models"
+                ) {
+                    HStack(spacing: 8) {
+                        SecureField("sk-...", text: $openaiKey)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 12, design: .monospaced))
 
-                HStack {
-                    Button("Save") {
-                        StorageManager.shared.saveAPIKey(openaiKey, for: .openai)
-                        showingSaved = true
-                    }
-                    .disabled(openaiKey.isEmpty)
+                        Button(hasOpenAIKey ? "Update" : "Save") {
+                            StorageManager.shared.saveAPIKey(openaiKey, for: .openai)
+                            openaiKey = ""
+                        }
+                        .disabled(openaiKey.isEmpty)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
 
-                    Button("Clear") {
-                        StorageManager.shared.deleteAPIKey(for: .openai)
-                        openaiKey = ""
+                        if hasOpenAIKey {
+                            Button("Remove") {
+                                StorageManager.shared.deleteAPIKey(for: .openai)
+                                openaiKey = ""
+                            }
+                            .controlSize(.small)
+                            .foregroundColor(.red)
+                        }
                     }
+                }
+
+                // Anthropic
+                ProviderCard(
+                    name: "Anthropic",
+                    icon: "sparkle",
+                    color: .orange,
+                    isConnected: hasAnthropicKey,
+                    description: "Claude and other Anthropic models"
+                ) {
+                    HStack(spacing: 8) {
+                        SecureField("sk-ant-...", text: $anthropicKey)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 12, design: .monospaced))
+
+                        Button(hasAnthropicKey ? "Update" : "Save") {
+                            StorageManager.shared.saveAPIKey(anthropicKey, for: .anthropic)
+                            anthropicKey = ""
+                        }
+                        .disabled(anthropicKey.isEmpty)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+
+                        if hasAnthropicKey {
+                            Button("Remove") {
+                                StorageManager.shared.deleteAPIKey(for: .anthropic)
+                                anthropicKey = ""
+                            }
+                            .controlSize(.small)
+                            .foregroundColor(.red)
+                        }
+                    }
+                }
+
+                // Ollama
+                ProviderCard(
+                    name: "Ollama",
+                    icon: "desktopcomputer",
+                    color: .blue,
+                    isConnected: ollama.isRunning,
+                    description: "Run models locally on your Mac"
+                ) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if ollama.isRunning && !ollama.availableModels.isEmpty {
+                            VStack(spacing: 0) {
+                                ForEach(Array(ollama.availableModels.enumerated()), id: \.element.id) { index, model in
+                                    HStack {
+                                        Text(model.name)
+                                            .font(.system(size: 12, design: .monospaced))
+                                        Spacer()
+                                        Text(ByteCountFormatter.string(fromByteCount: model.size, countStyle: .file))
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    if index < ollama.availableModels.count - 1 {
+                                        Divider()
+                                    }
+                                }
+                            }
+                            .background(Color(nsColor: .quaternaryLabelColor).opacity(0.15))
+                            .cornerRadius(6)
+                        } else if !ollama.isRunning {
+                            HStack(spacing: 6) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                                Text("Start Ollama to use local models.")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Link("Get Ollama", destination: URL(string: "https://ollama.com")!)
+                                    .font(.system(size: 12))
+                            }
+                        }
+
+                        HStack(spacing: 8) {
+                            Text("URL")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            TextField("http://localhost:11434", text: $appState.settings.ollamaBaseURL)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 12, design: .monospaced))
+                            Button {
+                                Task { await ollama.checkStatus() }
+                            } label: {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                            .controlSize(.small)
+                            .disabled(ollama.isChecking)
+                        }
+                    }
+                }
+
+                // Footer
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10))
+                    Text("API keys are stored in the macOS Keychain.")
+                        .font(.system(size: 11))
+                }
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+            }
+            .padding(20)
+        }
+        .onAppear {
+            Task { await ollama.checkStatus() }
+        }
+    }
+}
+
+struct ProviderCard<Content: View>: View {
+    let name: String
+    let icon: String
+    let color: Color
+    let isConnected: Bool
+    let description: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 28, height: 28)
+                    .background(RoundedRectangle(cornerRadius: 7).fill(color))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(name)
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(description)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(isConnected ? Color.green : Color(nsColor: .separatorColor))
+                        .frame(width: 7, height: 7)
+                    Text(isConnected ? "Connected" : "Not connected")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
             }
 
-            Section("Anthropic") {
-                SecureField("API Key", text: $anthropicKey)
-                    .textFieldStyle(.roundedBorder)
-
-                HStack {
-                    Button("Save") {
-                        StorageManager.shared.saveAPIKey(anthropicKey, for: .anthropic)
-                        showingSaved = true
-                    }
-                    .disabled(anthropicKey.isEmpty)
-
-                    Button("Clear") {
-                        StorageManager.shared.deleteAPIKey(for: .anthropic)
-                        anthropicKey = ""
-                    }
-                }
-            }
-
-            Section {
-                Text("API keys are stored securely in the macOS Keychain.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            content
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .alert("Keys Saved", isPresented: $showingSaved) {
-            Button("OK") { }
-        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+        )
     }
 }
 
@@ -441,19 +715,6 @@ struct AdvancedSettingsView: View {
 
                 Divider()
 
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Privacy")
-                            .font(.headline)
-
-                        Toggle("Enable telemetry", isOn: $appState.settings.enableTelemetry)
-                            .help("Help improve Yapper by sending anonymous usage data")
-
-                        Text("Telemetry helps us understand how Yapper is used and improve the app. No personal data or recordings are sent.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
 
                 Divider()
 

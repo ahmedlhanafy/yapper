@@ -10,8 +10,8 @@ class StorageManager {
 
     // Default storage location (avoids circular dependency with AppState)
     private let defaultStorageURL: URL = {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        return home.appendingPathComponent("Documents/Yapper")
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return appSupport.appendingPathComponent("Yapper")
     }()
 
     private var storageURL: URL {

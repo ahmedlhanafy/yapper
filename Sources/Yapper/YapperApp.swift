@@ -29,9 +29,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("🚀 APP STARTING - applicationDidFinishLaunching called")
         print("🚀 Main thread: \(Thread.isMainThread)")
 
-        // Hide dock icon - menubar only app
-        NSApp.setActivationPolicy(.accessory)
-        print("🚀 Activation policy set to .accessory")
+        // Set app icon (needed when running outside .app bundle)
+        NSApp.applicationIconImage = Self.loadAppIcon()
+
+        // Set dock visibility from settings
+        if AppState.shared.settings.showInDock {
+            NSApp.setActivationPolicy(.regular)
+        } else {
+            NSApp.setActivationPolicy(.accessory)
+        }
 
         // Apply saved appearance setting
         AppearanceManager.shared.applyAppearance()
@@ -108,13 +114,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if isRecording {
             button.image = NSImage(systemSymbolName: "waveform.circle.fill", accessibilityDescription: "Recording")
-            button.image?.isTemplate = true
-            print("📍 Updated menubar: Recording")
         } else {
             button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Yapper")
-            button.image?.isTemplate = true
-            print("📍 Updated menubar: Idle")
         }
+        button.image?.isTemplate = true
+    }
+
+    static func loadAppIcon() -> NSImage? {
+        // Try NSImage(named:) first (works in .app bundle)
+        if let icon = NSImage(named: "AppIcon") {
+            return icon
+        }
+        // Fallback: load from resource bundle PNG (debug builds)
+        let bundleName = "Yapper_Yapper.bundle"
+        let iconPath = "Assets.xcassets/AppIcon.appiconset/icon_512x512.png"
+        if let execURL = Bundle.main.executableURL {
+            let bundleURL = execURL.deletingLastPathComponent().appendingPathComponent(bundleName).appendingPathComponent(iconPath)
+            if let image = NSImage(contentsOf: bundleURL) {
+                return image
+            }
+        }
+        return nil
     }
 
     private func checkAccessibilityPermissions() {
@@ -148,10 +168,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = statusItem?.button {
             print("📍 Button exists: true")
 
-            // Use SF Symbol for clean menubar icon
             button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Yapper")
-            button.image?.isTemplate = true // Adapts to light/dark mode
-            print("📍 Using SF Symbol: waveform")
+            button.image?.isTemplate = true
 
             button.action = #selector(menuBarButtonClicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -191,9 +209,17 @@ class AppState: ObservableObject {
     static let shared = AppState()
 
     @Published var isRecording = false
-    @Published var currentMode: Mode = .voiceToText
     @Published var processingState: ProcessingState = .idle
     @Published var settings: Settings = Settings()
+
+    var currentMode: Mode {
+        get {
+            settings.modes.first { $0.key == settings.defaultModeKey } ?? .voiceToText
+        }
+        set {
+            settings.defaultModeKey = newValue.key
+        }
+    }
 
     private init() {
         loadSettings()

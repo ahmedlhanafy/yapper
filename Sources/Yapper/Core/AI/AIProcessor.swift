@@ -60,35 +60,32 @@ class AIProcessor {
         aiSettings: AISettings,
         context: CapturedContext?
     ) -> String {
-        var prompt = aiSettings.instructions + "\n\n"
+        var prompt = "Reply with ONLY the rewritten text. No explanations, no preamble.\n\n"
+        prompt += "\(aiSettings.instructions)\n\n"
 
         // Add context if available
         if let context = context {
             if let selection = context.selection {
-                prompt += "SELECTED TEXT:\n\(selection)\n\n"
+                prompt += "Selected text: \(selection)\n"
             }
-
             if let clipboard = context.clipboard {
-                prompt += "CLIPBOARD:\n\(clipboard)\n\n"
+                prompt += "Clipboard: \(clipboard)\n"
             }
-
             if let appContext = context.activeApp {
-                prompt += "ACTIVE APP: \(appContext.name)"
+                prompt += "App: \(appContext.name)"
                 if let url = appContext.url {
-                    prompt += " (URL: \(url))"
+                    prompt += " (\(url))"
                 }
-                prompt += "\n\n"
+                prompt += "\n"
             }
+            prompt += "\n"
         }
 
-        // Add translation instruction if needed
         if aiSettings.translateToEnglish {
-            prompt += "IMPORTANT: Translate the final output to English.\n\n"
+            prompt += "Translate to English.\n\n"
         }
 
-        // Add the transcript
-        prompt += "TRANSCRIBED TEXT:\n\(transcript)\n\n"
-        prompt += "OUTPUT:"
+        prompt += "Text: \(transcript)"
 
         return prompt
     }
@@ -105,8 +102,8 @@ class AIProcessor {
             return try await callOpenAI(prompt: prompt, model: model)
         case .anthropic:
             return try await callAnthropic(prompt: prompt, model: model)
-        case .local:
-            return try await callLocalModel(prompt: prompt, model: model)
+        case .ollama:
+            return try await callOllama(prompt: prompt, model: model)
         }
     }
 
@@ -199,11 +196,18 @@ class AIProcessor {
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    // MARK: - Local Model
+    // MARK: - Ollama
 
-    private func callLocalModel(prompt: String, model: String) async throws -> String {
-        // TODO: Implement local LLM inference (e.g., llama.cpp)
-        throw AIError.notImplemented
+    private func callOllama(prompt: String, model: String) async throws -> String {
+        if !OllamaService.shared.isRunning {
+            await OllamaService.shared.checkStatus()
+            guard OllamaService.shared.isRunning else {
+                throw OllamaError.notRunning
+            }
+        }
+
+        let messages = [["role": "user", "content": prompt]]
+        return try await OllamaService.shared.chatCompletion(model: model, messages: messages)
     }
 }
 
@@ -223,7 +227,6 @@ enum AIError: LocalizedError {
     case missingAPIKey(AIProvider)
     case invalidResponse
     case apiError(statusCode: Int, data: Data)
-    case notImplemented
 
     var errorDescription: String? {
         switch self {
@@ -234,8 +237,6 @@ enum AIError: LocalizedError {
         case .apiError(let statusCode, let data):
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
             return "AI API error (\(statusCode)): \(message)"
-        case .notImplemented:
-            return "Local model support not yet implemented."
         }
     }
 }

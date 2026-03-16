@@ -98,7 +98,7 @@ struct AISettings: Codable, Equatable, Hashable {
 
     init(
         provider: AIProvider = .openai,
-        model: String = "gpt-4",
+        model: String = "gpt-5.4",
         instructions: String = "",
         translateToEnglish: Bool = false
     ) {
@@ -112,21 +112,70 @@ struct AISettings: Codable, Equatable, Hashable {
 enum AIProvider: String, Codable, CaseIterable {
     case openai
     case anthropic
-    case local
+    case ollama
 
     var displayName: String {
         switch self {
         case .openai: return "OpenAI"
         case .anthropic: return "Anthropic"
-        case .local: return "Local Model"
+        case .ollama: return "Ollama"
         }
     }
 
     var defaultModel: String {
         switch self {
-        case .openai: return "gpt-4"
-        case .anthropic: return "claude-3-5-sonnet-20241022"
-        case .local: return "llama-3"
+        case .openai: return "gpt-5.4"
+        case .anthropic: return "claude-sonnet-4-6"
+        case .ollama: return "llama3:latest"
+        }
+    }
+
+    var availableModels: [(id: String, name: String)] {
+        switch self {
+        case .openai:
+            return [
+                ("gpt-5.4", "GPT-5.4 (Latest)"),
+                ("gpt-5.4-pro", "GPT-5.4 Pro"),
+                ("gpt-5-mini", "GPT-5 Mini"),
+                ("gpt-5-nano", "GPT-5 Nano"),
+                ("gpt-4.1", "GPT-4.1"),
+                ("gpt-4.1-mini", "GPT-4.1 Mini"),
+                ("gpt-4.1-nano", "GPT-4.1 Nano"),
+                ("gpt-4o", "GPT-4o"),
+                ("gpt-4o-mini", "GPT-4o Mini"),
+                ("o3", "o3 (Reasoning)"),
+                ("o4-mini", "o4-mini (Reasoning)"),
+            ]
+        case .anthropic:
+            return [
+                ("claude-opus-4-6", "Claude Opus 4.6"),
+                ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+                ("claude-haiku-4-5", "Claude Haiku 4.5"),
+                ("claude-sonnet-4-5", "Claude Sonnet 4.5"),
+                ("claude-opus-4-5", "Claude Opus 4.5"),
+            ]
+        case .ollama:
+            return [] // populated dynamically
+        }
+    }
+
+    var requiresAPIKey: Bool {
+        switch self {
+        case .openai, .anthropic: return true
+        case .ollama: return false
+        }
+    }
+
+    // Migrate legacy "local" raw value
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        if raw == "local" {
+            self = .ollama
+        } else if let value = AIProvider(rawValue: raw) {
+            self = value
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unknown AIProvider: \(raw)")
         }
     }
 }
@@ -189,7 +238,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4",
+            model: "gpt-5.4",
             instructions: """
             Transform the transcribed voice message into a professional email.
             - Use proper greeting and closing
@@ -210,7 +259,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4",
+            model: "gpt-5.4",
             instructions: """
             Transform the transcribed voice message into a casual, friendly message.
             - Keep it conversational and natural
@@ -230,7 +279,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4",
+            model: "gpt-5.4",
             instructions: """
             Transform the transcribed voice into organized notes.
             - Create bullet points or numbered lists when appropriate
@@ -251,7 +300,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4",
+            model: "gpt-5.4",
             instructions: """
             Transform the meeting transcription into structured meeting notes.
             - Extract key decisions and action items
@@ -277,7 +326,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4",
+            model: "gpt-5.4",
             instructions: """
             You are a context-aware text transformation assistant.
 

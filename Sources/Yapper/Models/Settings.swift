@@ -32,6 +32,7 @@ enum RecordingWindowStyle: String, Codable, CaseIterable {
 struct Settings: Codable {
     // General
     var startAtLogin: Bool
+    var showInDock: Bool
     var showMiniWindow: Bool
     var storageLocation: String // Path to config/data folder
     var appearanceMode: AppearanceMode
@@ -54,11 +55,16 @@ struct Settings: Codable {
     var hasOpenAIKey: Bool
     var hasAnthropicKey: Bool
 
-    // Privacy
-    var enableTelemetry: Bool
+    // Ollama
+    var ollamaBaseURL: String
+
+    // Notifications
+    var showToastNotifications: Bool
+
 
     init() {
         self.startAtLogin = false
+        self.showInDock = false
         self.showMiniWindow = false
         self.storageLocation = Self.defaultStorageLocation()
         self.appearanceMode = .system
@@ -77,7 +83,9 @@ struct Settings: Codable {
         self.hasOpenAIKey = false
         self.hasAnthropicKey = false
 
-        self.enableTelemetry = false
+        self.ollamaBaseURL = "http://localhost:11434"
+
+        self.showToastNotifications = true
     }
 
     static func defaultStorageLocation() -> String {

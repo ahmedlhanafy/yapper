@@ -134,9 +134,20 @@ struct ModeEditorView: View {
                                             Text(provider.displayName).tag(provider)
                                         }
                                     }
+                                    .onChange(of: aiSettingsBinding.provider.wrappedValue) { newProvider in
+                                        aiSettingsBinding.model.wrappedValue = newProvider.defaultModel
+                                    }
 
-                                    TextField("Model", text: aiSettingsBinding.model)
-                                        .textFieldStyle(.roundedBorder)
+                                    if aiSettingsBinding.provider.wrappedValue == .ollama {
+                                        OllamaModelPicker(selection: aiSettingsBinding.model)
+                                    } else {
+                                        let models = aiSettingsBinding.provider.wrappedValue.availableModels
+                                        Picker("Model", selection: aiSettingsBinding.model) {
+                                            ForEach(models, id: \.id) { model in
+                                                Text(model.name).tag(model.id)
+                                            }
+                                        }
+                                    }
 
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Instructions")
@@ -239,6 +250,55 @@ struct ModeEditorView: View {
 
         print("✓ Mode saved: \(mode.name)")
         self.dismiss()
+    }
+}
+
+// MARK: - Ollama Model Picker
+
+struct OllamaModelPicker: View {
+    @Binding var selection: String
+    @ObservedObject private var ollama = OllamaService.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(ollama.isRunning ? Color.green : Color.red)
+                    .frame(width: 8, height: 8)
+                Text(ollama.isRunning ? "Ollama running" : "Ollama not running")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Button("Refresh") {
+                    Task { await ollama.checkStatus() }
+                }
+                .font(.caption)
+                .disabled(ollama.isChecking)
+            }
+
+            if ollama.isRunning {
+                if ollama.availableModels.isEmpty {
+                    Text("No models found. Run: ollama pull llama3")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                } else {
+                    Picker("Model", selection: $selection) {
+                        ForEach(ollama.availableModels) { model in
+                            Text(model.name).tag(model.name)
+                        }
+                    }
+                }
+            } else {
+                Text("Start Ollama to see available models.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .onAppear {
+            Task { await ollama.checkStatus() }
+        }
     }
 }
 
