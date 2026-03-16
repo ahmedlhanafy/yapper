@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yapper - UX Concept Explorations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=SF+Pro+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --accent: #FF4D5A;
+            --accent-glow: rgba(255, 77, 90, 0.5);
+            --success: #34C759;
+            --bg-dark: #0a0a0a;
+            --bg-light: #f5f5f7;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            padding: 30px 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header p {
+            opacity: 0.5;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 20px 40px;
+            background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .nav-btn {
+            padding: 10px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .nav-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Concept Container */
+        .concept-container {
+            padding: 40px;
+            min-height: calc(100vh - 200px);
+        }
+
+        .concept {
+            display: none;
+        }
+
+        .concept.active {
+            display: block;
+        }
+
+        .concept-header {
+            margin-bottom: 30px;
+        }
+
+        .concept-header h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .concept-header .philosophy {
+            font-size: 16px;
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .concept-header .best-for {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid rgba(52, 199, 89, 0.3);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--success);
+            display: inline-block;
+        }
+
+        /* Demo Area */
+        .demo-area {
+            position: relative;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            min-height: 500px;
+            overflow: hidden;
+        }
+
+        .demo-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .demo-btn {
+            padding: 12px 24px;
+            background: var(--accent);
+            border: none;
+            border-radius: 25px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .demo-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .demo-btn.secondary {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* State indicator */
+        .state-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .state-indicator.recording {
+            background: var(--accent);
+        }
+
+        .state-indicator.processing {
+            background: #007AFF;
+        }
+
+        .state-indicator.done {
+            background: var(--success);
+        }
+
+        /* ========== CONCEPT A: Invisible Assistant ========== */
+        #concept-a .cursor-dot {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        #concept-a .cursor-dot.visible {
+            opacity: 1;
+            animation: dotPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        #concept-a .toast {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(20px);
+            padding: 16px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            opacity: 0;
+            transition: all 0.4s ease;
+            max-width: 400px;
+        }
+
+        #concept-a .toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #concept-a .toast-text {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        #concept-a .toast-meta {
+            font-size: 11px;
+            opacity: 0.5;
+            margin-top: 8px;
+        }
+
+        /* ========== CONCEPT B: Live Transcript ========== */
+        #concept-b .transcript-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(40px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 30px;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        #concept-b .transcript-window.visible {
+            opacity: 1;
+        }
+
+        #concept-b .transcript-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #concept-b .recording-indicator {
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: dotPulse 1s ease-in-out infinite;
+        }
+
+        #concept-b .transcript-text {
+            font-size: 18px;
+            line-height: 1.6;
+            min-height: 100px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        #concept-b .transcript-text .word {
+            display: inline;
+            opacity: 0;
+            animation: wordFade 0.3s ease forwards;
+        }
+
+        @keyframes wordFade {
+            to { opacity: 1; }
+        }
+
+        #concept-b .transcript-text .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background: var(--accent);
+            margin-left: 2px;
+            animation: blink 1s infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        #concept-b .transcript-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #concept-b .transcript-actions.visible {
+            opacity: 1;
+        }
+
+        #concept-b .action-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        #concept-b .action-btn.primary {
+            background: var(--success);
+        }
+
+        /* ========== CONCEPT C: Voice Command Center ========== */
+        #concept-c .command-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            background: rgba(20,20,25,0.95);
+            backdrop-filter: blur(40px);
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+            opacity: 0;
+            transition: all 0.3s;
+            overflow: hidden;
+        }
+
+        #concept-c .command-center.visible {
+            opacity: 1;
+        }
+
+        #concept-c .cc-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #concept-c .cc-mode-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        #concept-c .cc-mode {
+            padding: 8px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+        }
+
+        #concept-c .cc-mode.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        #concept-c .cc-main {
+            padding: 30px 24px;
+        }
+
+        #concept-c .cc-waveform {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+
+        #concept-c .cc-bar {
+            width: 4px;
+            background: linear-gradient(to top, var(--accent), #ff8066);
+            border-radius: 2px;
+            transition: height 0.1s;
+        }
+
+        #concept-c .cc-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+        }
+
+        #concept-c .cc-stat {
+            text-align: center;
+        }
+
+        #concept-c .cc-stat-value {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        #concept-c .cc-stat-label {
+            font-size: 11px;
+            opacity: 0.5;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #concept-c .cc-footer {
+            padding: 16px 24px;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #concept-c .cc-language {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        /* ========== CONCEPT D: Contextual Bubble ========== */
+        #concept-d .fake-editor {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            background: #1e1e1e;
+            border-radius: 12px;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+
+        #concept-d .editor-titlebar {
+            height: 36px;
+            background: #2d2d2d;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 8px;
+        }
+
+        #concept-d .editor-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        #concept-d .editor-dot.red { background: #ff5f56; }
+        #concept-d .editor-dot.yellow { background: #ffbd2e; }
+        #concept-d .editor-dot.green { background: #27ca40; }
+
+        #concept-d .editor-content {
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #d4d4d4;
+            min-height: 200px;
+        }
+
+        #concept-d .editor-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.2em;
+            background: #fff;
+            animation: blink 1s infinite;
+            vertical-align: text-bottom;
+        }
+
+        #concept-d .bubble {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+        }
+
+        #concept-d .bubble.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #concept-d .bubble-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: dotPulse 1s ease-in-out infinite;
+        }
+
+        #concept-d .bubble-waveform {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            height: 20px;
+        }
+
+        #concept-d .bubble-bar {
+            width: 2px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 1px;
+        }
+
+        /* ========== CONCEPT E: Ambient Presence ========== */
+        #concept-e .screen-border {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 4px solid transparent;
+            border-radius: 16px;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+
+        #concept-e .screen-border.recording {
+            border-color: var(--accent);
+            box-shadow:
+                inset 0 0 60px rgba(255, 77, 90, 0.1),
+                0 0 30px rgba(255, 77, 90, 0.3);
+            animation: borderPulse 2s ease-in-out infinite;
+        }
+
+        #concept-e .screen-border.done {
+            border-color: var(--success);
+            box-shadow:
+                inset 0 0 60px rgba(52, 199, 89, 0.1),
+                0 0 30px rgba(52, 199, 89, 0.3);
+        }
+
+        @keyframes borderPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        #concept-e .ambient-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        #concept-e .ambient-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        #concept-e .ambient-text {
+            font-size: 14px;
+            opacity: 0.5;
+        }
+
+        /* ========== CONCEPT F: Timeline Scrubber ========== */
+        #concept-f .timeline-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 700px;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(40px);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 24px;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        #concept-f .timeline-window.visible {
+            opacity: 1;
+        }
+
+        #concept-f .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #concept-f .timeline-track {
+            height: 80px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #concept-f .timeline-waveform {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            gap: 1px;
+            padding: 0 10px;
+        }
+
+        #concept-f .timeline-bar {
+            width: 3px;
+            background: linear-gradient(to top, var(--accent), #ff8066);
+            border-radius: 1px;
+            opacity: 0;
+            animation: barGrow 0.1s ease forwards;
+        }
+
+        @keyframes barGrow {
+            to { opacity: 1; }
+        }
+
+        #concept-f .timeline-playhead {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        #concept-f .timeline-time {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 11px;
+            opacity: 0.5;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        #concept-f .timeline-selection {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: rgba(0, 122, 255, 0.3);
+            border-left: 2px solid #007AFF;
+            border-right: 2px solid #007AFF;
+            display: none;
+        }
+
+        #concept-f .timeline-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #concept-f .timeline-actions.visible {
+            opacity: 1;
+        }
+
+        /* ========== CONCEPT G: Conversation Mode ========== */
+        #concept-g .conversation-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 700px;
+            height: 400px;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(40px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            opacity: 0;
+            transition: all 0.3s;
+            overflow: hidden;
+        }
+
+        #concept-g .conversation-window.visible {
+            opacity: 1;
+        }
+
+        #concept-g .conv-pane {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #concept-g .conv-pane.left {
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #concept-g .conv-pane-header {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.5;
+            margin-bottom: 16px;
+        }
+
+        #concept-g .conv-content {
+            flex: 1;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        #concept-g .conv-content.ai {
+            color: #a78bfa;
+        }
+
+        #concept-g .conv-suggestion {
+            background: rgba(167, 139, 250, 0.1);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 13px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+        }
+
+        #concept-g .conv-suggestion.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ========== CONCEPT H: Dock Widget ========== */
+        #concept-h .dock {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(30,30,30,0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #concept-h .dock-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #concept-h .dock-icon:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-4px);
+        }
+
+        #concept-h .dock-icon.yapper {
+            background: linear-gradient(135deg, var(--accent), #ff8066);
+            position: relative;
+        }
+
+        #concept-h .dock-icon.yapper.recording {
+            animation: dockPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes dockPulse {
+            0%, 100% { transform: translateY(-4px) scale(1); }
+            50% { transform: translateY(-4px) scale(1.1); }
+        }
+
+        #concept-h .dock-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: var(--success);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #concept-h .dock-badge.visible {
+            opacity: 1;
+        }
+
+        #concept-h .dock-expanded {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(20,20,25,0.95);
+            backdrop-filter: blur(40px);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 20px;
+            width: 300px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+
+        #concept-h .dock-expanded.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ========== CONCEPT I: Focus Mode ========== */
+        #concept-i .focus-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.5s;
+            pointer-events: none;
+        }
+
+        #concept-i .focus-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #concept-i .focus-waveform {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            height: 120px;
+        }
+
+        #concept-i .focus-bar {
+            width: 8px;
+            background: linear-gradient(to top, var(--accent), #ff8066);
+            border-radius: 4px;
+            transition: height 0.1s;
+        }
+
+        #concept-i .focus-text {
+            font-size: 32px;
+            font-weight: 300;
+            margin-top: 40px;
+            opacity: 0;
+            transform: scale(1.2);
+            transition: all 0.5s;
+            text-align: center;
+            max-width: 600px;
+        }
+
+        #concept-i .focus-text.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        #concept-i .focus-hint {
+            position: absolute;
+            bottom: 40px;
+            font-size: 13px;
+            opacity: 0.4;
+        }
+
+        /* ========== CONCEPT J: Quick Actions ========== */
+        #concept-j .quick-bar {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(40px);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        #concept-j .quick-bar.visible {
+            opacity: 1;
+        }
+
+        #concept-j .quick-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: dotPulse 1s ease-in-out infinite;
+        }
+
+        #concept-j .quick-waveform {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            height: 30px;
+        }
+
+        #concept-j .quick-bar-item {
+            width: 3px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 1px;
+        }
+
+        #concept-j .quick-timer {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        #concept-j .quick-actions {
+            position: absolute;
+            top: calc(50% + 50px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(40px);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        #concept-j .quick-actions.visible {
+            opacity: 1;
+        }
+
+        #concept-j .quick-action {
+            padding: 10px 16px;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        #concept-j .quick-action:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        #concept-j .quick-action .key {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Yapper UX Concepts</h1>
+            <p>10 different approaches to the recording experience</p>
+        </div>
+    </div>
+
+    <div class="nav">
+        <button class="nav-btn active" onclick="showConcept('a')">A. Invisible</button>
+        <button class="nav-btn" onclick="showConcept('b')">B. Live Transcript</button>
+        <button class="nav-btn" onclick="showConcept('c')">C. Command Center</button>
+        <button class="nav-btn" onclick="showConcept('d')">D. Contextual Bubble</button>
+        <button class="nav-btn" onclick="showConcept('e')">E. Ambient Presence</button>
+        <button class="nav-btn" onclick="showConcept('f')">F. Timeline</button>
+        <button class="nav-btn" onclick="showConcept('g')">G. Conversation</button>
+        <button class="nav-btn" onclick="showConcept('h')">H. Dock Widget</button>
+        <button class="nav-btn" onclick="showConcept('i')">I. Focus Mode</button>
+        <button class="nav-btn" onclick="showConcept('j')">J. Quick Actions</button>
+    </div>
+
+    <div class="concept-container">
+        <!-- CONCEPT A: Invisible Assistant -->
+        <div class="concept active" id="concept-a">
+            <div class="concept-header">
+                <h2>A. Invisible Assistant</h2>
+                <p class="philosophy">"Recording should be nearly invisible - just a tiny indicator that you're being heard."</p>
+                <div class="best-for">Best for: Power users who want minimal distraction</div>
+            </div>
+            <div class="demo-area" onmousemove="moveCursorDot(event)">
+                <div class="state-indicator" id="state-a">Idle</div>
+                <div class="cursor-dot" id="cursor-dot-a"></div>
+                <div class="toast" id="toast-a">
+                    <div class="toast-text" id="toast-text-a"></div>
+                    <div class="toast-meta">Copied to clipboard</div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptA()">Hold to Record</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT B: Live Transcript -->
+        <div class="concept" id="concept-b">
+            <div class="concept-header">
+                <h2>B. Live Transcript</h2>
+                <p class="philosophy">"Show what's being captured in real-time."</p>
+                <div class="best-for">Best for: Users who want to verify accuracy</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-b">Idle</div>
+                <div class="transcript-window" id="transcript-window-b">
+                    <div class="transcript-header">
+                        <div class="recording-indicator" id="rec-indicator-b"></div>
+                        <span style="font-size: 13px; opacity: 0.6;">Recording...</span>
+                    </div>
+                    <div class="transcript-text" id="transcript-text-b"></div>
+                    <div class="transcript-actions" id="transcript-actions-b">
+                        <button class="action-btn">Edit</button>
+                        <button class="action-btn primary">Insert Text</button>
+                        <button class="action-btn">Cancel</button>
+                    </div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptB()">Start Recording</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT C: Command Center -->
+        <div class="concept" id="concept-c">
+            <div class="concept-header">
+                <h2>C. Voice Command Center</h2>
+                <p class="philosophy">"Full control panel with mode switching during recording."</p>
+                <div class="best-for">Best for: Users who want maximum control</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-c">Idle</div>
+                <div class="command-center" id="command-center-c">
+                    <div class="cc-header">
+                        <div class="cc-mode-selector">
+                            <div class="cc-mode active">Dictation</div>
+                            <div class="cc-mode">Grammar Fix</div>
+                            <div class="cc-mode">Translate</div>
+                            <div class="cc-mode">Summarize</div>
+                        </div>
+                    </div>
+                    <div class="cc-main">
+                        <div class="cc-waveform" id="cc-waveform-c"></div>
+                        <div class="cc-stats">
+                            <div class="cc-stat">
+                                <div class="cc-stat-value" id="cc-duration-c">0:00</div>
+                                <div class="cc-stat-label">Duration</div>
+                            </div>
+                            <div class="cc-stat">
+                                <div class="cc-stat-value" id="cc-words-c">~0</div>
+                                <div class="cc-stat-label">Est. Words</div>
+                            </div>
+                            <div class="cc-stat">
+                                <div class="cc-stat-value">-32 dB</div>
+                                <div class="cc-stat-label">Volume</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cc-footer">
+                        <div class="cc-language">
+                            <span>🌐</span>
+                            <span>Auto-detect (English)</span>
+                        </div>
+                        <div style="font-size: 12px; opacity: 0.5;">⌥Space to stop</div>
+                    </div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptC()">Start Recording</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT D: Contextual Bubble -->
+        <div class="concept" id="concept-d">
+            <div class="concept-header">
+                <h2>D. Contextual Bubble</h2>
+                <p class="philosophy">"Recording UI attaches to where you're typing."</p>
+                <div class="best-for">Best for: Users focused on text input workflows</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-d">Idle</div>
+                <div class="fake-editor">
+                    <div class="editor-titlebar">
+                        <div class="editor-dot red"></div>
+                        <div class="editor-dot yellow"></div>
+                        <div class="editor-dot green"></div>
+                    </div>
+                    <div class="editor-content" id="editor-content-d">
+                        <span>Dear Team,</span><br><br>
+                        <span>I wanted to follow up on our meeting yesterday.</span><br><br>
+                        <span id="typed-text-d"></span><span class="editor-cursor"></span>
+                    </div>
+                </div>
+                <div class="bubble" id="bubble-d" style="top: 280px; left: calc(50% + 80px);">
+                    <div class="bubble-dot"></div>
+                    <div class="bubble-waveform" id="bubble-waveform-d"></div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptD()">Start Recording</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT E: Ambient Presence -->
+        <div class="concept" id="concept-e">
+            <div class="concept-header">
+                <h2>E. Ambient Presence</h2>
+                <p class="philosophy">"Screen-wide subtle indication without blocking anything."</p>
+                <div class="best-for">Best for: Full-screen app users, presenters</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-e">Idle</div>
+                <div class="screen-border" id="screen-border-e"></div>
+                <div class="ambient-content">
+                    <div class="ambient-icon">🎙️</div>
+                    <div class="ambient-text">Press button to see ambient recording indicator</div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptE()">Start Recording</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT F: Timeline Scrubber -->
+        <div class="concept" id="concept-f">
+            <div class="concept-header">
+                <h2>F. Timeline Scrubber</h2>
+                <p class="philosophy">"Recording is a timeline you can navigate."</p>
+                <div class="best-for">Best for: Long-form dictation, editing workflows</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-f">Idle</div>
+                <div class="timeline-window" id="timeline-window-f">
+                    <div class="timeline-header">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 10px; height: 10px; background: var(--accent); border-radius: 50%; animation: dotPulse 1s infinite;" id="timeline-dot-f"></div>
+                            <span style="font-size: 14px;">Recording in progress...</span>
+                        </div>
+                        <span id="timeline-duration-f" style="font-family: 'JetBrains Mono'; font-size: 14px;">0:00</span>
+                    </div>
+                    <div class="timeline-track">
+                        <div class="timeline-waveform" id="timeline-waveform-f"></div>
+                        <div class="timeline-playhead" id="timeline-playhead-f" style="left: 0;"></div>
+                        <div class="timeline-selection" id="timeline-selection-f"></div>
+                    </div>
+                    <div class="timeline-time">
+                        <span>0:00</span>
+                        <span id="timeline-end-f">0:00</span>
+                    </div>
+                    <div class="timeline-actions" id="timeline-actions-f">
+                        <button class="action-btn">▶️ Play Selection</button>
+                        <button class="action-btn primary">Transcribe Selection</button>
+                        <button class="action-btn">Transcribe All</button>
+                    </div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptF()">Start Recording</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT G: Conversation Mode -->
+        <div class="concept" id="concept-g">
+            <div class="concept-header">
+                <h2>G. Conversation Mode</h2>
+                <p class="philosophy">"Back-and-forth with AI during recording."</p>
+                <div class="best-for">Best for: Writing assistance, brainstorming</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-g">Idle</div>
+                <div class="conversation-window" id="conversation-window-g">
+                    <div class="conv-pane left">
+                        <div class="conv-pane-header">Your Speech</div>
+                        <div class="conv-content" id="conv-speech-g"></div>
+                    </div>
+                    <div class="conv-pane">
+                        <div class="conv-pane-header">AI Suggestions</div>
+                        <div class="conv-content ai" id="conv-ai-g">
+                            <div class="conv-suggestion" id="conv-suggestion-1">
+                                💡 <strong>More formal:</strong> "I would like to discuss..."
+                            </div>
+                            <div class="conv-suggestion" id="conv-suggestion-2">
+                                ✨ <strong>More concise:</strong> "Let's talk about..."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptG()">Start Recording</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT H: Dock Widget -->
+        <div class="concept" id="concept-h">
+            <div class="concept-header">
+                <h2>H. Dock Widget</h2>
+                <p class="philosophy">"Permanent home in the dock that expands when active."</p>
+                <div class="best-for">Best for: Users who want persistent access</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-h">Idle</div>
+                <div class="dock">
+                    <div class="dock-icon">📁</div>
+                    <div class="dock-icon">🌐</div>
+                    <div class="dock-icon yapper" id="dock-yapper-h" onclick="toggleDockH()">
+                        🎙️
+                        <div class="dock-badge" id="dock-badge-h">42</div>
+                    </div>
+                    <div class="dock-icon">⚙️</div>
+                </div>
+                <div class="dock-expanded" id="dock-expanded-h">
+                    <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">Yapper</div>
+                    <div id="dock-waveform-h" style="height: 40px; display: flex; gap: 2px; align-items: center; margin-bottom: 12px;"></div>
+                    <div style="font-size: 12px; opacity: 0.5;">Click icon or press ⌥Space to record</div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptH()">Click Dock Icon to Record</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT I: Focus Mode -->
+        <div class="concept" id="concept-i">
+            <div class="concept-header">
+                <h2>I. Focus Mode</h2>
+                <p class="philosophy">"Recording takes over everything, maximum immersion."</p>
+                <div class="best-for">Best for: Dedicated dictation sessions</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-i">Idle</div>
+                <div class="focus-overlay" id="focus-overlay-i">
+                    <div class="focus-waveform" id="focus-waveform-i"></div>
+                    <div class="focus-text" id="focus-text-i"></div>
+                    <div class="focus-hint">Press any key to stop recording</div>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptI()">Enter Focus Mode</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCEPT J: Quick Actions -->
+        <div class="concept" id="concept-j">
+            <div class="concept-header">
+                <h2>J. Quick Actions</h2>
+                <p class="philosophy">"Recording triggers from anywhere with contextual actions."</p>
+                <div class="best-for">Best for: Users with varied output destinations</div>
+            </div>
+            <div class="demo-area">
+                <div class="state-indicator" id="state-j">Idle</div>
+                <div class="quick-bar" id="quick-bar-j">
+                    <div class="quick-dot"></div>
+                    <div class="quick-waveform" id="quick-waveform-j"></div>
+                    <div class="quick-timer" id="quick-timer-j">0:00</div>
+                </div>
+                <div class="quick-actions" id="quick-actions-j">
+                    <button class="quick-action"><span class="key">1</span> Paste</button>
+                    <button class="quick-action"><span class="key">2</span> Copy</button>
+                    <button class="quick-action"><span class="key">3</span> Save</button>
+                    <button class="quick-action"><span class="key">4</span> Email</button>
+                    <button class="quick-action"><span class="key">5</span> Translate</button>
+                </div>
+                <div class="demo-controls">
+                    <button class="demo-btn" onclick="startConceptJ()">Start Recording</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample transcript text
+        const sampleText = "I wanted to discuss the upcoming project timeline and make sure everyone is aligned on the key milestones we need to hit this quarter.";
+        const words = sampleText.split(' ');
+
+        let currentConcept = 'a';
+        let animationIntervals = {};
+
+        function showConcept(id) {
+            // Stop all animations
+            Object.values(animationIntervals).forEach(interval => clearInterval(interval));
+            animationIntervals = {};
+
+            // Reset all states
+            resetAllConcepts();
+
+            // Hide all concepts
+            document.querySelectorAll('.concept').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+            // Show selected
+            document.getElementById(`concept-${id}`).classList.add('active');
+            document.querySelectorAll('.nav-btn')[id.charCodeAt(0) - 97].classList.add('active');
+
+            currentConcept = id;
+        }
+
+        function resetAllConcepts() {
+            // Reset A
+            document.getElementById('cursor-dot-a').classList.remove('visible');
+            document.getElementById('toast-a').classList.remove('visible');
+            document.getElementById('state-a').className = 'state-indicator';
+            document.getElementById('state-a').textContent = 'Idle';
+
+            // Reset B
+            document.getElementById('transcript-window-b').classList.remove('visible');
+            document.getElementById('transcript-text-b').innerHTML = '';
+            document.getElementById('transcript-actions-b').classList.remove('visible');
+            document.getElementById('state-b').className = 'state-indicator';
+            document.getElementById('state-b').textContent = 'Idle';
+
+            // Reset C
+            document.getElementById('command-center-c').classList.remove('visible');
+            document.getElementById('cc-duration-c').textContent = '0:00';
+            document.getElementById('cc-words-c').textContent = '~0';
+            document.getElementById('state-c').className = 'state-indicator';
+            document.getElementById('state-c').textContent = 'Idle';
+
+            // Reset D
+            document.getElementById('bubble-d').classList.remove('visible');
+            document.getElementById('typed-text-d').textContent = '';
+            document.getElementById('state-d').className = 'state-indicator';
+            document.getElementById('state-d').textContent = 'Idle';
+
+            // Reset E
+            document.getElementById('screen-border-e').className = 'screen-border';
+            document.getElementById('state-e').className = 'state-indicator';
+            document.getElementById('state-e').textContent = 'Idle';
+
+            // Reset F
+            document.getElementById('timeline-window-f').classList.remove('visible');
+            document.getElementById('timeline-waveform-f').innerHTML = '';
+            document.getElementById('timeline-actions-f').classList.remove('visible');
+            document.getElementById('state-f').className = 'state-indicator';
+            document.getElementById('state-f').textContent = 'Idle';
+
+            // Reset G
+            document.getElementById('conversation-window-g').classList.remove('visible');
+            document.getElementById('conv-speech-g').innerHTML = '';
+            document.querySelectorAll('.conv-suggestion').forEach(s => s.classList.remove('visible'));
+            document.getElementById('state-g').className = 'state-indicator';
+            document.getElementById('state-g').textContent = 'Idle';
+
+            // Reset H
+            document.getElementById('dock-yapper-h').classList.remove('recording');
+            document.getElementById('dock-expanded-h').classList.remove('visible');
+            document.getElementById('dock-badge-h').classList.remove('visible');
+            document.getElementById('state-h').className = 'state-indicator';
+            document.getElementById('state-h').textContent = 'Idle';
+
+            // Reset I
+            document.getElementById('focus-overlay-i').classList.remove('visible');
+            document.getElementById('focus-text-i').classList.remove('visible');
+            document.getElementById('focus-text-i').textContent = '';
+            document.getElementById('state-i').className = 'state-indicator';
+            document.getElementById('state-i').textContent = 'Idle';
+
+            // Reset J
+            document.getElementById('quick-bar-j').classList.remove('visible');
+            document.getElementById('quick-actions-j').classList.remove('visible');
+            document.getElementById('state-j').className = 'state-indicator';
+            document.getElementById('state-j').textContent = 'Idle';
+        }
+
+        // Concept A: Invisible Assistant
+        function moveCursorDot(e) {
+            const dot = document.getElementById('cursor-dot-a');
+            const rect = e.currentTarget.getBoundingClientRect();
+            dot.style.left = (e.clientX - rect.left + 15) + 'px';
+            dot.style.top = (e.clientY - rect.top + 15) + 'px';
+        }
+
+        function startConceptA() {
+            const dot = document.getElementById('cursor-dot-a');
+            const toast = document.getElementById('toast-a');
+            const state = document.getElementById('state-a');
+
+            dot.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            setTimeout(() => {
+                dot.classList.remove('visible');
+                state.className = 'state-indicator processing';
+                state.textContent = 'Processing';
+
+                setTimeout(() => {
+                    state.className = 'state-indicator done';
+                    state.textContent = 'Done';
+                    document.getElementById('toast-text-a').textContent = sampleText;
+                    toast.classList.add('visible');
+
+                    setTimeout(() => {
+                        toast.classList.remove('visible');
+                        state.className = 'state-indicator';
+                        state.textContent = 'Idle';
+                    }, 3000);
+                }, 1000);
+            }, 3000);
+        }
+
+        // Concept B: Live Transcript
+        function startConceptB() {
+            const window = document.getElementById('transcript-window-b');
+            const text = document.getElementById('transcript-text-b');
+            const actions = document.getElementById('transcript-actions-b');
+            const state = document.getElementById('state-b');
+
+            window.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+            text.innerHTML = '<span class="cursor"></span>';
+
+            let wordIndex = 0;
+            animationIntervals.b = setInterval(() => {
+                if (wordIndex < words.length) {
+                    const cursor = text.querySelector('.cursor');
+                    const wordSpan = document.createElement('span');
+                    wordSpan.className = 'word';
+                    wordSpan.textContent = words[wordIndex] + ' ';
+                    text.insertBefore(wordSpan, cursor);
+                    wordIndex++;
+                } else {
+                    clearInterval(animationIntervals.b);
+                    document.getElementById('rec-indicator-b').style.display = 'none';
+                    state.className = 'state-indicator done';
+                    state.textContent = 'Done';
+                    text.querySelector('.cursor').remove();
+                    actions.classList.add('visible');
+                }
+            }, 200);
+        }
+
+        // Concept C: Command Center
+        function startConceptC() {
+            const center = document.getElementById('command-center-c');
+            const waveform = document.getElementById('cc-waveform-c');
+            const duration = document.getElementById('cc-duration-c');
+            const wordsEl = document.getElementById('cc-words-c');
+            const state = document.getElementById('state-c');
+
+            center.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            // Create waveform bars
+            waveform.innerHTML = '';
+            for (let i = 0; i < 60; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'cc-bar';
+                bar.style.height = '10px';
+                waveform.appendChild(bar);
+            }
+
+            let seconds = 0;
+            animationIntervals.c = setInterval(() => {
+                seconds++;
+                duration.textContent = `0:${seconds.toString().padStart(2, '0')}`;
+                wordsEl.textContent = `~${Math.floor(seconds * 2.5)}`;
+
+                // Animate bars
+                waveform.querySelectorAll('.cc-bar').forEach(bar => {
+                    bar.style.height = (Math.random() * 60 + 10) + 'px';
+                });
+
+                if (seconds >= 5) {
+                    clearInterval(animationIntervals.c);
+                    state.className = 'state-indicator done';
+                    state.textContent = 'Done';
+                }
+            }, 1000);
+        }
+
+        // Concept D: Contextual Bubble
+        function startConceptD() {
+            const bubble = document.getElementById('bubble-d');
+            const typed = document.getElementById('typed-text-d');
+            const waveform = document.getElementById('bubble-waveform-d');
+            const state = document.getElementById('state-d');
+
+            bubble.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            // Create waveform bars
+            waveform.innerHTML = '';
+            for (let i = 0; i < 15; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bubble-bar';
+                bar.style.height = '5px';
+                waveform.appendChild(bar);
+            }
+
+            animationIntervals.d = setInterval(() => {
+                waveform.querySelectorAll('.bubble-bar').forEach(bar => {
+                    bar.style.height = (Math.random() * 15 + 3) + 'px';
+                });
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(animationIntervals.d);
+                bubble.classList.remove('visible');
+                state.className = 'state-indicator done';
+                state.textContent = 'Done';
+
+                // Type out the text
+                let charIndex = 0;
+                animationIntervals.d2 = setInterval(() => {
+                    if (charIndex < sampleText.length) {
+                        typed.textContent += sampleText[charIndex];
+                        charIndex++;
+                    } else {
+                        clearInterval(animationIntervals.d2);
+                    }
+                }, 30);
+            }, 3000);
+        }
+
+        // Concept E: Ambient Presence
+        function startConceptE() {
+            const border = document.getElementById('screen-border-e');
+            const state = document.getElementById('state-e');
+
+            border.classList.add('recording');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            setTimeout(() => {
+                border.classList.remove('recording');
+                border.classList.add('done');
+                state.className = 'state-indicator done';
+                state.textContent = 'Done';
+
+                setTimeout(() => {
+                    border.classList.remove('done');
+                    state.className = 'state-indicator';
+                    state.textContent = 'Idle';
+                }, 2000);
+            }, 3000);
+        }
+
+        // Concept F: Timeline Scrubber
+        function startConceptF() {
+            const window = document.getElementById('timeline-window-f');
+            const waveform = document.getElementById('timeline-waveform-f');
+            const playhead = document.getElementById('timeline-playhead-f');
+            const actions = document.getElementById('timeline-actions-f');
+            const duration = document.getElementById('timeline-duration-f');
+            const endTime = document.getElementById('timeline-end-f');
+            const state = document.getElementById('state-f');
+
+            window.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+            waveform.innerHTML = '';
+
+            let seconds = 0;
+            let barCount = 0;
+            animationIntervals.f = setInterval(() => {
+                // Add bars
+                for (let i = 0; i < 10; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'timeline-bar';
+                    bar.style.height = (Math.random() * 60 + 10) + 'px';
+                    bar.style.animationDelay = (i * 0.02) + 's';
+                    waveform.appendChild(bar);
+                    barCount++;
+                }
+
+                // Move playhead
+                playhead.style.left = (barCount * 4) + 'px';
+
+                seconds++;
+                duration.textContent = `0:${seconds.toString().padStart(2, '0')}`;
+                endTime.textContent = `0:${seconds.toString().padStart(2, '0')}`;
+
+                if (seconds >= 5) {
+                    clearInterval(animationIntervals.f);
+                    document.getElementById('timeline-dot-f').style.display = 'none';
+                    state.className = 'state-indicator done';
+                    state.textContent = 'Done';
+                    actions.classList.add('visible');
+                }
+            }, 1000);
+        }
+
+        // Concept G: Conversation Mode
+        function startConceptG() {
+            const window = document.getElementById('conversation-window-g');
+            const speech = document.getElementById('conv-speech-g');
+            const sugg1 = document.getElementById('conv-suggestion-1');
+            const sugg2 = document.getElementById('conv-suggestion-2');
+            const state = document.getElementById('state-g');
+
+            window.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            let wordIndex = 0;
+            animationIntervals.g = setInterval(() => {
+                if (wordIndex < words.length) {
+                    speech.textContent += words[wordIndex] + ' ';
+                    wordIndex++;
+
+                    if (wordIndex === 5) {
+                        sugg1.classList.add('visible');
+                    }
+                    if (wordIndex === 10) {
+                        sugg2.classList.add('visible');
+                    }
+                } else {
+                    clearInterval(animationIntervals.g);
+                    state.className = 'state-indicator done';
+                    state.textContent = 'Done';
+                }
+            }, 300);
+        }
+
+        // Concept H: Dock Widget
+        let dockExpanded = false;
+        function toggleDockH() {
+            const expanded = document.getElementById('dock-expanded-h');
+            dockExpanded = !dockExpanded;
+            if (dockExpanded) {
+                expanded.classList.add('visible');
+            } else {
+                expanded.classList.remove('visible');
+            }
+        }
+
+        function startConceptH() {
+            const icon = document.getElementById('dock-yapper-h');
+            const expanded = document.getElementById('dock-expanded-h');
+            const badge = document.getElementById('dock-badge-h');
+            const waveform = document.getElementById('dock-waveform-h');
+            const state = document.getElementById('state-h');
+
+            icon.classList.add('recording');
+            expanded.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            // Create waveform
+            waveform.innerHTML = '';
+            for (let i = 0; i < 30; i++) {
+                const bar = document.createElement('div');
+                bar.style.width = '3px';
+                bar.style.height = '10px';
+                bar.style.background = 'var(--accent)';
+                bar.style.borderRadius = '1px';
+                waveform.appendChild(bar);
+            }
+
+            animationIntervals.h = setInterval(() => {
+                waveform.querySelectorAll('div').forEach(bar => {
+                    bar.style.height = (Math.random() * 30 + 5) + 'px';
+                });
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(animationIntervals.h);
+                icon.classList.remove('recording');
+                state.className = 'state-indicator done';
+                state.textContent = 'Done';
+                badge.classList.add('visible');
+            }, 3000);
+        }
+
+        // Concept I: Focus Mode
+        function startConceptI() {
+            const overlay = document.getElementById('focus-overlay-i');
+            const waveform = document.getElementById('focus-waveform-i');
+            const text = document.getElementById('focus-text-i');
+            const state = document.getElementById('state-i');
+
+            overlay.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            // Create waveform
+            waveform.innerHTML = '';
+            for (let i = 0; i < 40; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'focus-bar';
+                bar.style.height = '20px';
+                waveform.appendChild(bar);
+            }
+
+            animationIntervals.i = setInterval(() => {
+                waveform.querySelectorAll('.focus-bar').forEach(bar => {
+                    bar.style.height = (Math.random() * 100 + 20) + 'px';
+                });
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(animationIntervals.i);
+                waveform.style.display = 'none';
+                text.textContent = sampleText;
+                text.classList.add('visible');
+                state.className = 'state-indicator done';
+                state.textContent = 'Done';
+
+                setTimeout(() => {
+                    overlay.classList.remove('visible');
+                    text.classList.remove('visible');
+                    waveform.style.display = 'flex';
+                    state.className = 'state-indicator';
+                    state.textContent = 'Idle';
+                }, 3000);
+            }, 3000);
+        }
+
+        // Concept J: Quick Actions
+        function startConceptJ() {
+            const bar = document.getElementById('quick-bar-j');
+            const actions = document.getElementById('quick-actions-j');
+            const waveform = document.getElementById('quick-waveform-j');
+            const timer = document.getElementById('quick-timer-j');
+            const state = document.getElementById('state-j');
+
+            bar.classList.add('visible');
+            state.className = 'state-indicator recording';
+            state.textContent = 'Recording';
+
+            // Create waveform
+            waveform.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const barEl = document.createElement('div');
+                barEl.className = 'quick-bar-item';
+                barEl.style.height = '10px';
+                waveform.appendChild(barEl);
+            }
+
+            let seconds = 0;
+            animationIntervals.j = setInterval(() => {
+                seconds++;
+                timer.textContent = `0:${seconds.toString().padStart(2, '0')}`;
+
+                waveform.querySelectorAll('.quick-bar-item').forEach(b => {
+                    b.style.height = (Math.random() * 25 + 5) + 'px';
+                });
+
+                if (seconds >= 3) {
+                    clearInterval(animationIntervals.j);
+                    state.className = 'state-indicator done';
+                    state.textContent = 'Done';
+                    actions.classList.add('visible');
+                }
+            }, 1000);
+        }
+
+        // Initialize waveforms that need them on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize bubble waveform for concept D
+            const bubbleWaveform = document.getElementById('bubble-waveform-d');
+            for (let i = 0; i < 15; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bubble-bar';
+                bar.style.height = '5px';
+                bubbleWaveform.appendChild(bar);
+            }
+        });
+    </script>
+</body>
+</html>

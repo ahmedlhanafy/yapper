@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>Yapper</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.yapper.app</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Yapper</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- Privacy Permissions -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Yapper needs access to your microphone to transcribe your voice into text.</string>
+
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Yapper needs to send keystrokes to insert transcribed text into active applications.</string>
+
+    <!-- Accessibility is handled at runtime via AXIsProcessTrusted -->
+
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+
+    <!-- Document types for file transcription -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>wav</string>
+                <string>mp3</string>
+                <string>m4a</string>
+                <string>mp4</string>
+                <string>mov</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>Audio/Video File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+        </dict>
+    </array>
+
+    <!-- URL Scheme for automation -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>Yapper URL Scheme</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>yapper</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- Sandboxing disabled for MVP (enable for App Store) -->
+    <!-- <key>com.apple.security.app-sandbox</key> -->
+    <!-- <true/> -->
+
+    <!-- Required entitlements for direct distribution -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+</dict>
+</plist>

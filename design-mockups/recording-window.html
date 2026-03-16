@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yapper Recording Window - Design Mockups</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Caveat:wght@500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-light: #f5f5f7;
+            --bg-dark: #1a1a1a;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            transition: background 0.3s ease;
+            padding: 40px;
+        }
+
+        body.dark {
+            background: var(--bg-dark);
+            color: #fff;
+        }
+
+        body.light {
+            background: var(--bg-light);
+            color: #000;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 40px;
+            justify-content: center;
+        }
+
+        .control-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        body.dark .control-btn {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        body.light .control-btn {
+            background: rgba(0,0,0,0.08);
+            color: #000;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .control-btn.active {
+            background: #007AFF !important;
+            color: #fff !important;
+        }
+
+        .mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 16px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+        }
+
+        body.dark .mode-toggle {
+            background: #333;
+            color: #fff;
+        }
+
+        body.light .mode-toggle {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Preview Container */
+        .preview-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 300px;
+            padding: 60px;
+            border-radius: 24px;
+            margin-bottom: 40px;
+        }
+
+        body.dark .preview-container {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+        }
+
+        body.light .preview-container {
+            background: linear-gradient(135deg, #e8e8e8 0%, #d8d8d8 100%);
+        }
+
+        /* Base Recording Window */
+        .recording-window {
+            display: none;
+            flex-direction: column;
+            width: 380px;
+            height: 140px;
+            position: relative;
+        }
+
+        .recording-window.active {
+            display: flex;
+        }
+
+        .waveform-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 20px 12px;
+            position: relative;
+        }
+
+        .waveform {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            height: 50px;
+        }
+
+        .bar {
+            width: 3px;
+            border-radius: 2px;
+            transition: height 0.08s ease-out;
+        }
+
+        .recording-dot {
+            position: absolute;
+            top: 20px;
+            left: 22px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+        }
+
+        .toolbar {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            border-top: 1px solid rgba(128,128,128,0.2);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            opacity: 0.5;
+        }
+
+        .shortcuts {
+            display: flex;
+            gap: 16px;
+        }
+
+        .shortcut {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            opacity: 0.6;
+        }
+
+        .key {
+            padding: 3px 6px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        /* ========== DESIGN 1: Glassmorphic ========== */
+        .design-1 {
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-radius: 36px;
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow:
+                0 8px 32px rgba(0,0,0,0.4),
+                0 2px 8px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+
+        body.light .design-1 {
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow:
+                0 8px 32px rgba(0,0,0,0.15),
+                0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .design-1 .bar {
+            background: linear-gradient(to top, #ff4d5a, #ff8066);
+        }
+
+        .design-1 .recording-dot {
+            background: radial-gradient(circle, #ff5959, #ff0000);
+            box-shadow: 0 0 12px rgba(255,0,0,0.5);
+        }
+
+        .design-1 .key {
+            background: rgba(255,255,255,0.08);
+            border: 0.5px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.65);
+        }
+
+        body.light .design-1 .key {
+            background: rgba(0,0,0,0.05);
+            border: 0.5px solid rgba(0,0,0,0.08);
+            color: rgba(0,0,0,0.55);
+        }
+
+        /* ========== DESIGN 2: Monochrome Clean ========== */
+        .design-2 {
+            background: #000;
+            border-radius: 24px;
+            border: 1px solid #333;
+        }
+
+        body.light .design-2 {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+        }
+
+        .design-2 .bar {
+            background: #fff;
+        }
+
+        body.light .design-2 .bar {
+            background: #000;
+        }
+
+        .design-2 .recording-dot {
+            background: #ff3b30;
+        }
+
+        .design-2 .toolbar {
+            border-color: #333;
+        }
+
+        body.light .design-2 .toolbar {
+            border-color: #e0e0e0;
+        }
+
+        .design-2 .key {
+            background: #222;
+            color: #888;
+        }
+
+        body.light .design-2 .key {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        /* ========== DESIGN 3: Neon Glow ========== */
+        .design-3 {
+            background: #0a0a0f;
+            border-radius: 20px;
+            border: 1px solid #1a1a2e;
+            box-shadow:
+                0 0 60px rgba(0,255,255,0.1),
+                0 0 30px rgba(255,0,255,0.1);
+        }
+
+        .design-3 .bar {
+            background: linear-gradient(to top, #00ffff, #ff00ff);
+            box-shadow: 0 0 10px currentColor;
+            filter: brightness(1.2);
+        }
+
+        .design-3 .recording-dot {
+            background: #ff0080;
+            box-shadow: 0 0 20px #ff0080, 0 0 40px #ff0080;
+        }
+
+        .design-3 .toolbar {
+            border-color: #1a1a2e;
+        }
+
+        .design-3 .brand,
+        .design-3 .shortcut {
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .design-3 .key {
+            background: rgba(0,255,255,0.1);
+            border: 1px solid rgba(0,255,255,0.3);
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        /* ========== DESIGN 4: Brutalist ========== */
+        .design-4 {
+            background: #fff;
+            border-radius: 0;
+            border: 3px solid #000;
+            box-shadow: 8px 8px 0 #000;
+        }
+
+        body.dark .design-4 {
+            background: #000;
+            border-color: #fff;
+            box-shadow: 8px 8px 0 #fff;
+        }
+
+        .design-4 .bar {
+            background: #ff0000;
+            border-radius: 0;
+        }
+
+        .design-4 .recording-dot {
+            background: #ff0000;
+            border-radius: 0;
+            width: 10px;
+            height: 10px;
+        }
+
+        .design-4 .toolbar {
+            border-top: 3px solid #000;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body.dark .design-4 .toolbar {
+            border-color: #fff;
+        }
+
+        .design-4 .key {
+            background: #000;
+            color: #fff;
+            border-radius: 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body.dark .design-4 .key {
+            background: #fff;
+            color: #000;
+        }
+
+        /* ========== DESIGN 5: Soft Pastel ========== */
+        .design-5 {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 40px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(252,182,159,0.4);
+        }
+
+        body.dark .design-5 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 20px 60px rgba(118,75,162,0.4);
+        }
+
+        .design-5 .bar {
+            background: linear-gradient(to top, #ff9a9e, #fecfef);
+            border-radius: 4px;
+        }
+
+        body.dark .design-5 .bar {
+            background: linear-gradient(to top, #a8edea, #fed6e3);
+        }
+
+        .design-5 .recording-dot {
+            background: #ff6b6b;
+            box-shadow: 0 0 20px rgba(255,107,107,0.5);
+        }
+
+        .design-5 .toolbar {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .design-5 .brand,
+        .design-5 .shortcut {
+            color: rgba(0,0,0,0.5);
+        }
+
+        body.dark .design-5 .brand,
+        body.dark .design-5 .shortcut {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .design-5 .key {
+            background: rgba(255,255,255,0.5);
+            color: rgba(0,0,0,0.6);
+        }
+
+        body.dark .design-5 .key {
+            background: rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.8);
+        }
+
+        /* ========== DESIGN 6: Neumorphic ========== */
+        .design-6 {
+            background: #e0e5ec;
+            border-radius: 30px;
+            border: none;
+            box-shadow:
+                20px 20px 60px #bec3c9,
+                -20px -20px 60px #ffffff,
+                inset 2px 2px 5px rgba(255,255,255,0.5),
+                inset -2px -2px 5px rgba(0,0,0,0.05);
+        }
+
+        body.dark .design-6 {
+            background: #2d2d3a;
+            box-shadow:
+                20px 20px 60px #1a1a24,
+                -20px -20px 60px #404050,
+                inset 2px 2px 5px rgba(255,255,255,0.05),
+                inset -2px -2px 5px rgba(0,0,0,0.2);
+        }
+
+        .design-6 .waveform-area {
+            background: linear-gradient(145deg, #cacfd6, #f0f5fc);
+            margin: 12px;
+            border-radius: 20px;
+            box-shadow:
+                inset 5px 5px 10px #bec3c9,
+                inset -5px -5px 10px #ffffff;
+        }
+
+        body.dark .design-6 .waveform-area {
+            background: linear-gradient(145deg, #262632, #34344a);
+            box-shadow:
+                inset 5px 5px 10px #1a1a24,
+                inset -5px -5px 10px #404050;
+        }
+
+        .design-6 .bar {
+            background: linear-gradient(to top, #6c5ce7, #a29bfe);
+            border-radius: 3px;
+        }
+
+        .design-6 .recording-dot {
+            background: #e74c3c;
+            box-shadow:
+                3px 3px 6px rgba(0,0,0,0.2),
+                -2px -2px 5px rgba(255,255,255,0.1);
+        }
+
+        .design-6 .toolbar {
+            border: none;
+            margin: 0 12px 12px;
+        }
+
+        .design-6 .key {
+            background: linear-gradient(145deg, #cacfd6, #f0f5fc);
+            box-shadow:
+                3px 3px 6px #bec3c9,
+                -3px -3px 6px #ffffff;
+            color: #666;
+        }
+
+        body.dark .design-6 .key {
+            background: linear-gradient(145deg, #262632, #34344a);
+            box-shadow:
+                3px 3px 6px #1a1a24,
+                -3px -3px 6px #404050;
+            color: #aaa;
+        }
+
+        /* ========== DESIGN 7: Retro Terminal ========== */
+        .design-7 {
+            background: #0a0a0a;
+            border-radius: 8px;
+            border: 2px solid #00ff00;
+            box-shadow:
+                0 0 20px rgba(0,255,0,0.2),
+                inset 0 0 100px rgba(0,255,0,0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-7::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0,0,0,0.15),
+                rgba(0,0,0,0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        .design-7 .bar {
+            background: #00ff00;
+            border-radius: 0;
+            box-shadow: 0 0 8px #00ff00;
+        }
+
+        .design-7 .recording-dot {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+            border-radius: 0;
+        }
+
+        .design-7 .toolbar {
+            border-color: #00ff00;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .design-7 .brand,
+        .design-7 .shortcut {
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .design-7 .key {
+            background: transparent;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            border-radius: 2px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ========== DESIGN 8: Liquid Metal ========== */
+        .design-8 {
+            background: linear-gradient(135deg, #3a3a3a 0%, #1a1a1a 50%, #3a3a3a 100%);
+            border-radius: 28px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow:
+                0 10px 40px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.3),
+                inset 0 -1px 0 rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-8::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 40%,
+                rgba(255,255,255,0.1) 50%,
+                transparent 60%
+            );
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%); }
+            100% { transform: translateX(100%) translateY(100%); }
+        }
+
+        .design-8 .bar {
+            background: linear-gradient(to top, #c0c0c0, #ffffff, #c0c0c0);
+            box-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        .design-8 .recording-dot {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            box-shadow:
+                0 2px 4px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .design-8 .toolbar {
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        .design-8 .brand,
+        .design-8 .shortcut {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .design-8 .key {
+            background: linear-gradient(to bottom, #4a4a4a, #2a2a2a);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #ccc;
+            box-shadow:
+                0 2px 4px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        /* ========== DESIGN 9: Paper/Sketch ========== */
+        .design-9 {
+            background: #faf8f5;
+            border-radius: 12px;
+            border: 2px solid #333;
+            box-shadow: 4px 4px 0 #333;
+            position: relative;
+        }
+
+        body.dark .design-9 {
+            background: #2a2824;
+            border-color: #d4c8b8;
+            box-shadow: 4px 4px 0 #d4c8b8;
+        }
+
+        .design-9::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+            pointer-events: none;
+            border-radius: 10px;
+        }
+
+        .design-9 .bar {
+            background: #333;
+            border-radius: 0;
+            transform: skewX(-2deg);
+        }
+
+        body.dark .design-9 .bar {
+            background: #d4c8b8;
+        }
+
+        .design-9 .recording-dot {
+            background: #e63946;
+            border: 2px solid #333;
+        }
+
+        .design-9 .toolbar {
+            border-top: 2px dashed #333;
+            font-family: 'Caveat', cursive;
+            font-size: 14px;
+        }
+
+        body.dark .design-9 .toolbar {
+            border-color: #d4c8b8;
+        }
+
+        .design-9 .brand,
+        .design-9 .shortcut {
+            color: #333;
+        }
+
+        body.dark .design-9 .brand,
+        body.dark .design-9 .shortcut {
+            color: #d4c8b8;
+        }
+
+        .design-9 .key {
+            background: transparent;
+            border: 2px solid #333;
+            color: #333;
+            border-radius: 4px;
+            font-family: 'Caveat', cursive;
+            font-size: 12px;
+        }
+
+        body.dark .design-9 .key {
+            border-color: #d4c8b8;
+            color: #d4c8b8;
+        }
+
+        /* ========== DESIGN 10: macOS Native ========== */
+        .design-10 {
+            background: rgba(30,30,30,0.8);
+            backdrop-filter: blur(50px) saturate(180%);
+            -webkit-backdrop-filter: blur(50px) saturate(180%);
+            border-radius: 12px;
+            border: 0.5px solid rgba(255,255,255,0.2);
+            box-shadow:
+                0 24px 38px 3px rgba(0,0,0,0.24),
+                0 9px 46px 8px rgba(0,0,0,0.18),
+                0 11px 15px -7px rgba(0,0,0,0.22);
+        }
+
+        body.light .design-10 {
+            background: rgba(255,255,255,0.8);
+            border: 0.5px solid rgba(0,0,0,0.1);
+            box-shadow:
+                0 24px 38px 3px rgba(0,0,0,0.08),
+                0 9px 46px 8px rgba(0,0,0,0.06),
+                0 11px 15px -7px rgba(0,0,0,0.05);
+        }
+
+        .design-10 .bar {
+            background: #007AFF;
+            border-radius: 1.5px;
+        }
+
+        .design-10 .recording-dot {
+            background: #FF3B30;
+        }
+
+        .design-10 .toolbar {
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        body.light .design-10 .toolbar {
+            border-color: rgba(0,0,0,0.1);
+        }
+
+        .design-10 .brand,
+        .design-10 .shortcut {
+            color: rgba(255,255,255,0.55);
+            font-weight: 400;
+        }
+
+        body.light .design-10 .brand,
+        body.light .design-10 .shortcut {
+            color: rgba(0,0,0,0.5);
+        }
+
+        .design-10 .key {
+            background: rgba(255,255,255,0.1);
+            border: 0.5px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.7);
+            border-radius: 4px;
+        }
+
+        body.light .design-10 .key {
+            background: rgba(0,0,0,0.06);
+            border: 0.5px solid rgba(0,0,0,0.1);
+            color: rgba(0,0,0,0.6);
+        }
+
+        /* Design Labels */
+        .design-label {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        .design-description {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 13px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body class="dark">
+    <button class="mode-toggle" onclick="toggleMode()">Toggle Light/Dark</button>
+
+    <div class="controls">
+        <button class="control-btn active" onclick="showDesign(1)">1. Glassmorphic</button>
+        <button class="control-btn" onclick="showDesign(2)">2. Monochrome</button>
+        <button class="control-btn" onclick="showDesign(3)">3. Neon Glow</button>
+        <button class="control-btn" onclick="showDesign(4)">4. Brutalist</button>
+        <button class="control-btn" onclick="showDesign(5)">5. Soft Pastel</button>
+        <button class="control-btn" onclick="showDesign(6)">6. Neumorphic</button>
+        <button class="control-btn" onclick="showDesign(7)">7. Retro Terminal</button>
+        <button class="control-btn" onclick="showDesign(8)">8. Liquid Metal</button>
+        <button class="control-btn" onclick="showDesign(9)">9. Paper/Sketch</button>
+        <button class="control-btn" onclick="showDesign(10)">10. macOS Native</button>
+    </div>
+
+    <div class="preview-container">
+        <!-- Design 1: Glassmorphic -->
+        <div class="recording-window design-1 active" id="design-1">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-1"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 2: Monochrome -->
+        <div class="recording-window design-2" id="design-2">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-2"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 3: Neon Glow -->
+        <div class="recording-window design-3" id="design-3">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-3"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 4: Brutalist -->
+        <div class="recording-window design-4" id="design-4">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-4"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>></span>
+                    <span>YAPPER</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>STOP</span>
+                        <span class="key">ALT</span>
+                        <span class="key">SPC</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>CANCEL</span>
+                        <span class="key">ESC</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 5: Soft Pastel -->
+        <div class="recording-window design-5" id="design-5">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-5"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 6: Neumorphic -->
+        <div class="recording-window design-6" id="design-6">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-6"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 7: Retro Terminal -->
+        <div class="recording-window design-7" id="design-7">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-7"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>$</span>
+                    <span>yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>stop</span>
+                        <span class="key">alt</span>
+                        <span class="key">spc</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 8: Liquid Metal -->
+        <div class="recording-window design-8" id="design-8">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-8"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 9: Paper/Sketch -->
+        <div class="recording-window design-9" id="design-9">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-9"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design 10: macOS Native -->
+        <div class="recording-window design-10" id="design-10">
+            <div class="waveform-area">
+                <div class="recording-dot"></div>
+                <div class="waveform" id="waveform-10"></div>
+            </div>
+            <div class="toolbar">
+                <div class="brand">
+                    <span>~</span>
+                    <span>Yapper</span>
+                </div>
+                <div class="shortcuts">
+                    <div class="shortcut">
+                        <span>Stop</span>
+                        <span class="key">⌥</span>
+                        <span class="key">Space</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Cancel</span>
+                        <span class="key">esc</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="design-label" id="design-label">1. Glassmorphic</div>
+    <div class="design-description" id="design-description">Frosted glass effect with gradient waveform and soft shadows</div>
+
+    <script>
+        const descriptions = {
+            1: { name: '1. Glassmorphic', desc: 'Frosted glass effect with gradient waveform and soft shadows' },
+            2: { name: '2. Monochrome Clean', desc: 'Ultra-minimal single-color design with stark contrast' },
+            3: { name: '3. Neon Glow', desc: 'Cyberpunk aesthetic with glowing cyan/magenta waveforms' },
+            4: { name: '4. Brutalist', desc: 'Raw, industrial design with sharp corners and bold typography' },
+            5: { name: '5. Soft Pastel', desc: 'Dreamy gradient backgrounds with soft, rounded elements' },
+            6: { name: '6. Neumorphic', desc: 'Soft UI with embossed elements and subtle depth' },
+            7: { name: '7. Retro Terminal', desc: 'CRT-style green phosphor with scanlines' },
+            8: { name: '8. Liquid Metal', desc: 'Chrome/metallic gradients with reflective shimmer' },
+            9: { name: '9. Paper/Sketch', desc: 'Hand-drawn aesthetic with paper texture' },
+            10: { name: '10. macOS Native', desc: 'Apple Human Interface Guidelines compliant design' }
+        };
+
+        // Initialize waveforms
+        for (let i = 1; i <= 10; i++) {
+            const waveform = document.getElementById(`waveform-${i}`);
+            for (let j = 0; j < 50; j++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = '4px';
+                waveform.appendChild(bar);
+            }
+        }
+
+        // Animate waveforms
+        function animateWaveforms() {
+            for (let i = 1; i <= 10; i++) {
+                const waveform = document.getElementById(`waveform-${i}`);
+                const bars = waveform.querySelectorAll('.bar');
+                bars.forEach((bar, index) => {
+                    const height = Math.random() * 40 + 5;
+                    bar.style.height = `${height}px`;
+                });
+            }
+        }
+
+        setInterval(animateWaveforms, 100);
+
+        // Show design
+        function showDesign(num) {
+            document.querySelectorAll('.recording-window').forEach(w => w.classList.remove('active'));
+            document.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(`design-${num}`).classList.add('active');
+            document.querySelectorAll('.control-btn')[num - 1].classList.add('active');
+
+            document.getElementById('design-label').textContent = descriptions[num].name;
+            document.getElementById('design-description').textContent = descriptions[num].desc;
+        }
+
+        // Toggle mode
+        function toggleMode() {
+            document.body.classList.toggle('dark');
+            document.body.classList.toggle('light');
+        }
+    </script>
+</body>
+</html>

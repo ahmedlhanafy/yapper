@@ -1,0 +1,241 @@
+import Foundation
+
+/// Processes transcribed text using AI based on mode instructions
+class AIProcessor {
+    static let shared = AIProcessor()
+
+    private init() {}
+
+    func process(
+        transcript: String,
+        mode: Mode,
+        context: CapturedContext? = nil
+    ) async throws -> ProcessingResult {
+        guard mode.aiEnabled, let aiSettings = mode.aiSettings else {
+            // No AI processing - return transcript as-is
+            return ProcessingResult(
+                output: transcript,
+                prompt: nil,
+                provider: nil,
+                model: nil,
+                processingTime: 0
+            )
+        }
+
+        print("🤖 Processing with \(aiSettings.provider.displayName)...")
+
+        let startTime = Date()
+
+        // Build prompt
+        let prompt = buildPrompt(
+            transcript: transcript,
+            aiSettings: aiSettings,
+            context: context
+        )
+
+        // Call AI provider
+        let output = try await callAI(
+            prompt: prompt,
+            provider: aiSettings.provider,
+            model: aiSettings.model
+        )
+
+        let processingTime = Date().timeIntervalSince(startTime)
+
+        print("✓ AI processing complete (\(String(format: "%.2f", processingTime))s)")
+
+        return ProcessingResult(
+            output: output,
+            prompt: prompt,
+            provider: aiSettings.provider.rawValue,
+            model: aiSettings.model,
+            processingTime: processingTime
+        )
+    }
+
+    // MARK: - Prompt Building
+
+    private func buildPrompt(
+        transcript: String,
+        aiSettings: AISettings,
+        context: CapturedContext?
+    ) -> String {
+        var prompt = aiSettings.instructions + "\n\n"
+
+        // Add context if available
+        if let context = context {
+            if let selection = context.selection {
+                prompt += "SELECTED TEXT:\n\(selection)\n\n"
+            }
+
+            if let clipboard = context.clipboard {
+                prompt += "CLIPBOARD:\n\(clipboard)\n\n"
+            }
+
+            if let appContext = context.activeApp {
+                prompt += "ACTIVE APP: \(appContext.name)"
+                if let url = appContext.url {
+                    prompt += " (URL: \(url))"
+                }
+                prompt += "\n\n"
+            }
+        }
+
+        // Add translation instruction if needed
+        if aiSettings.translateToEnglish {
+            prompt += "IMPORTANT: Translate the final output to English.\n\n"
+        }
+
+        // Add the transcript
+        prompt += "TRANSCRIBED TEXT:\n\(transcript)\n\n"
+        prompt += "OUTPUT:"
+
+        return prompt
+    }
+
+    // MARK: - AI Providers
+
+    private func callAI(
+        prompt: String,
+        provider: AIProvider,
+        model: String
+    ) async throws -> String {
+        switch provider {
+        case .openai:
+            return try await callOpenAI(prompt: prompt, model: model)
+        case .anthropic:
+            return try await callAnthropic(prompt: prompt, model: model)
+        case .local:
+            return try await callLocalModel(prompt: prompt, model: model)
+        }
+    }
+
+    // MARK: - OpenAI
+
+    private func callOpenAI(prompt: String, model: String) async throws -> String {
+        guard let apiKey = StorageManager.shared.loadAPIKey(for: .openai) else {
+            throw AIError.missingAPIKey(.openai)
+        }
+
+        let url = URL(string: "https://api.openai.com/v1/chat/completions")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "model": model,
+            "messages": [
+                ["role": "user", "content": prompt]
+            ],
+            "temperature": 0.3,
+            "max_tokens": 2000
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw AIError.apiError(statusCode: httpResponse.statusCode, data: data)
+        }
+
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        guard let choices = json?["choices"] as? [[String: Any]],
+              let message = choices.first?["message"] as? [String: Any],
+              let content = message["content"] as? String else {
+            throw AIError.invalidResponse
+        }
+
+        return content.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Anthropic
+
+    private func callAnthropic(prompt: String, model: String) async throws -> String {
+        guard let apiKey = StorageManager.shared.loadAPIKey(for: .anthropic) else {
+            throw AIError.missingAPIKey(.anthropic)
+        }
+
+        let url = URL(string: "https://api.anthropic.com/v1/messages")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+
+        let body: [String: Any] = [
+            "model": model,
+            "messages": [
+                ["role": "user", "content": prompt]
+            ],
+            "max_tokens": 2000
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw AIError.apiError(statusCode: httpResponse.statusCode, data: data)
+        }
+
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        guard let content = json?["content"] as? [[String: Any]],
+              let text = content.first?["text"] as? String else {
+            throw AIError.invalidResponse
+        }
+
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Local Model
+
+    private func callLocalModel(prompt: String, model: String) async throws -> String {
+        // TODO: Implement local LLM inference (e.g., llama.cpp)
+        throw AIError.notImplemented
+    }
+}
+
+// MARK: - Types
+
+struct ProcessingResult {
+    let output: String
+    let prompt: String?
+    let provider: String?
+    let model: String?
+    let processingTime: TimeInterval
+}
+
+// MARK: - Errors
+
+enum AIError: LocalizedError {
+    case missingAPIKey(AIProvider)
+    case invalidResponse
+    case apiError(statusCode: Int, data: Data)
+    case notImplemented
+
+    var errorDescription: String? {
+        switch self {
+        case .missingAPIKey(let provider):
+            return "No API key found for \(provider.displayName). Please add it in Settings."
+        case .invalidResponse:
+            return "Invalid response from AI provider."
+        case .apiError(let statusCode, let data):
+            let message = String(data: data, encoding: .utf8) ?? "Unknown error"
+            return "AI API error (\(statusCode)): \(message)"
+        case .notImplemented:
+            return "Local model support not yet implemented."
+        }
+    }
+}

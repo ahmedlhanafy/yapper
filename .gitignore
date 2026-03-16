@@ -1,0 +1,8 @@
+.DS_Store
+.build/
+build/
+dist/
+.swiftpm/xcode/
+*.xcodeproj
+xcuserdata/
+Vendor/whisper.cpp/
