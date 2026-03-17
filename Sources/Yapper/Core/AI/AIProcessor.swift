@@ -22,7 +22,7 @@ class AIProcessor {
             )
         }
 
-        print("🤖 Processing with \(aiSettings.provider.displayName)...")
+        print("🤖 Processing with \(aiSettings.provider.displayName) / \(aiSettings.model)")
 
         let startTime = Date()
 
@@ -139,6 +139,8 @@ class AIProcessor {
         }
 
         guard httpResponse.statusCode == 200 else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "unknown"
+            print("❌ OpenAI error \(httpResponse.statusCode): \(errorBody)")
             throw AIError.apiError(statusCode: httpResponse.statusCode, data: data)
         }
 
@@ -146,6 +148,7 @@ class AIProcessor {
         guard let choices = json?["choices"] as? [[String: Any]],
               let message = choices.first?["message"] as? [String: Any],
               let content = message["content"] as? String else {
+            print("❌ OpenAI unexpected response: \(String(data: data, encoding: .utf8) ?? "nil")")
             throw AIError.invalidResponse
         }
 

@@ -57,7 +57,7 @@ struct VoiceSettings: Codable, Equatable, Hashable {
 
     init(
         language: String = "auto",
-        model: WhisperModel = .base,
+        model: WhisperModel = .largeV3Turbo,
         keepWarmDuration: TimeInterval? = nil
     ) {
         self.language = language
@@ -71,10 +71,14 @@ enum WhisperModel: String, Codable, CaseIterable {
     case base
     case small
     case medium
+    case largeV3Turbo = "large-v3-turbo"
     case large
 
     var displayName: String {
-        rawValue.capitalized
+        switch self {
+        case .largeV3Turbo: return "Large V3 Turbo"
+        default: return rawValue.capitalized
+        }
     }
 
     var estimatedSize: String {
@@ -83,6 +87,7 @@ enum WhisperModel: String, Codable, CaseIterable {
         case .base: return "142 MB"
         case .small: return "466 MB"
         case .medium: return "1.5 GB"
+        case .largeV3Turbo: return "1.6 GB"
         case .large: return "2.9 GB"
         }
     }
@@ -98,7 +103,7 @@ struct AISettings: Codable, Equatable, Hashable {
 
     init(
         provider: AIProvider = .openai,
-        model: String = "gpt-5.4",
+        model: String = "gpt-4o",
         instructions: String = "",
         translateToEnglish: Bool = false
     ) {
@@ -124,7 +129,7 @@ enum AIProvider: String, Codable, CaseIterable {
 
     var defaultModel: String {
         switch self {
-        case .openai: return "gpt-5.4"
+        case .openai: return "gpt-4o"
         case .anthropic: return "claude-sonnet-4-6"
         case .ollama: return "llama3:latest"
         }
@@ -134,25 +139,23 @@ enum AIProvider: String, Codable, CaseIterable {
         switch self {
         case .openai:
             return [
-                ("gpt-5.4", "GPT-5.4 (Latest)"),
-                ("gpt-5.4-pro", "GPT-5.4 Pro"),
-                ("gpt-5-mini", "GPT-5 Mini"),
-                ("gpt-5-nano", "GPT-5 Nano"),
+                ("gpt-4o", "GPT-4o"),
+                ("gpt-4o-mini", "GPT-4o Mini"),
                 ("gpt-4.1", "GPT-4.1"),
                 ("gpt-4.1-mini", "GPT-4.1 Mini"),
                 ("gpt-4.1-nano", "GPT-4.1 Nano"),
-                ("gpt-4o", "GPT-4o"),
-                ("gpt-4o-mini", "GPT-4o Mini"),
+                ("gpt-4-turbo", "GPT-4 Turbo"),
+                ("gpt-4", "GPT-4"),
+                ("gpt-3.5-turbo", "GPT-3.5 Turbo"),
                 ("o3", "o3 (Reasoning)"),
                 ("o4-mini", "o4-mini (Reasoning)"),
             ]
         case .anthropic:
             return [
-                ("claude-opus-4-6", "Claude Opus 4.6"),
                 ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+                ("claude-opus-4-6", "Claude Opus 4.6"),
                 ("claude-haiku-4-5", "Claude Haiku 4.5"),
                 ("claude-sonnet-4-5", "Claude Sonnet 4.5"),
-                ("claude-opus-4-5", "Claude Opus 4.5"),
             ]
         case .ollama:
             return [] // populated dynamically
@@ -225,7 +228,7 @@ extension Mode {
         name: "Voice to Text",
         key: "voice-to-text",
         isBuiltIn: true,
-        voiceSettings: VoiceSettings(language: "auto", model: .base),
+        voiceSettings: VoiceSettings(language: "auto", model: .largeV3Turbo),
         aiEnabled: false,
         outputBehavior: .insertAtCursor
     )
@@ -234,11 +237,11 @@ extension Mode {
         name: "Email",
         key: "email",
         isBuiltIn: true,
-        voiceSettings: VoiceSettings(language: "auto", model: .base),
+        voiceSettings: VoiceSettings(language: "auto", model: .largeV3Turbo),
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-5.4",
+            model: "gpt-4o",
             instructions: """
             Transform the transcribed voice message into a professional email.
             - Use proper greeting and closing
@@ -255,11 +258,11 @@ extension Mode {
         name: "Message",
         key: "message",
         isBuiltIn: true,
-        voiceSettings: VoiceSettings(language: "auto", model: .base),
+        voiceSettings: VoiceSettings(language: "auto", model: .largeV3Turbo),
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-5.4",
+            model: "gpt-4o",
             instructions: """
             Transform the transcribed voice message into a casual, friendly message.
             - Keep it conversational and natural
@@ -275,11 +278,11 @@ extension Mode {
         name: "Note",
         key: "note",
         isBuiltIn: true,
-        voiceSettings: VoiceSettings(language: "auto", model: .base),
+        voiceSettings: VoiceSettings(language: "auto", model: .largeV3Turbo),
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-5.4",
+            model: "gpt-4o",
             instructions: """
             Transform the transcribed voice into organized notes.
             - Create bullet points or numbered lists when appropriate
@@ -296,11 +299,11 @@ extension Mode {
         name: "Meeting",
         key: "meeting",
         isBuiltIn: true,
-        voiceSettings: VoiceSettings(language: "auto", model: .base),
+        voiceSettings: VoiceSettings(language: "auto", model: .largeV3Turbo),
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-5.4",
+            model: "gpt-4o",
             instructions: """
             Transform the meeting transcription into structured meeting notes.
             - Extract key decisions and action items
@@ -322,11 +325,11 @@ extension Mode {
         name: "Super",
         key: "super",
         isBuiltIn: true,
-        voiceSettings: VoiceSettings(language: "auto", model: .base),
+        voiceSettings: VoiceSettings(language: "auto", model: .largeV3Turbo),
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-5.4",
+            model: "gpt-4o",
             instructions: """
             You are a context-aware text transformation assistant.
 

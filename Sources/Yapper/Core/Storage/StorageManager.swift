@@ -257,13 +257,21 @@ extension StorageManager {
         ]
         SecItemDelete(deleteQuery as CFDictionary)
 
-        // Add new
-        let addQuery: [String: Any] = [
+        // Create access that allows any app to read without prompting
+        var access: SecAccess?
+        var trustedApps: CFArray?
+        // Empty trusted apps list + no prompt = accessible by any process from this user
+        SecAccessCreate("Yapper API Key" as CFString, trustedApps, &access)
+
+        var addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
             kSecAttrAccount as String: account,
             kSecValueData as String: key.data(using: .utf8)!
         ]
+        if let access = access {
+            addQuery[kSecAttrAccess as String] = access
+        }
 
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         if status == errSecSuccess {

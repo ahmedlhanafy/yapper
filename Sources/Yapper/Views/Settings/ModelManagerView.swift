@@ -146,6 +146,8 @@ struct ModelManagerView: View {
             return "Slower, better accuracy • For important recordings"
         case .medium:
             return "Slow, excellent accuracy • For meetings and transcription"
+        case .largeV3Turbo:
+            return "Fast + accurate • Best balance for real-time dictation"
         case .large:
             return "Very slow, best accuracy • For critical transcriptions"
         }
