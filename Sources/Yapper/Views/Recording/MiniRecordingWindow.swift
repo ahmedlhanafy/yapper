@@ -280,7 +280,7 @@ class MiniRecordingWindowController {
         case .classic:
             let view = RecordingWindowContent()
             let size = NSSize(width: 380, height: 140)
-            let container = RoundedVisualEffectView(rootView: view, cornerRadius: 36, size: size)
+            let container = RoundedVisualEffectView(rootView: view, cornerRadius: 20, size: size)
             hostingView = container
             windowWidth = 380
             windowHeight = 140

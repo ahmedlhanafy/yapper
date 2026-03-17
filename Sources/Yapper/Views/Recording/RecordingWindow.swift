@@ -5,41 +5,35 @@ struct RecordingWindowContent: View {
     @ObservedObject var appState = AppState.shared
     @ObservedObject var audioEngine = AudioEngine.shared
     @ObservedObject var coordinator = RecordingCoordinator.shared
-    @Environment(\.colorScheme) var colorScheme
 
     @State private var waveformLevels: [CGFloat] = Array(repeating: 0.15, count: 60)
     @State private var pulseScale: CGFloat = 1.0
     @State private var glowOpacity: Double = 0.3
+    @State private var shimmerRotation: Double = 0
 
-    private let cornerRadius: CGFloat = 36
+    private let cornerRadius: CGFloat = 20
+
+    // Monochrome silver palette
+    private let goldLight = Color(red: 0.85, green: 0.85, blue: 0.88)
+    private let goldDark = Color(red: 0.55, green: 0.55, blue: 0.6)
+    private let warmWhite = Color(red: 0.95, green: 0.95, blue: 0.97)
 
     private var borderColor: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.12)
-            : Color.black.opacity(0.08)
-    }
-
-    private var innerBorderColor: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.06)
-            : Color.white.opacity(0.5)
+        goldDark.opacity(0.3)
     }
 
     private var waveformGradient: LinearGradient {
         if appState.isRecording {
             return LinearGradient(
-                colors: [
-                    Color(red: 1.0, green: 0.3, blue: 0.35),
-                    Color(red: 1.0, green: 0.5, blue: 0.4)
-                ],
+                colors: [goldDark, goldLight],
                 startPoint: .bottom,
                 endPoint: .top
             )
         } else {
             return LinearGradient(
                 colors: [
-                    colorScheme == .dark ? Color.white.opacity(0.4) : Color.black.opacity(0.3),
-                    colorScheme == .dark ? Color.white.opacity(0.25) : Color.black.opacity(0.2)
+                    Color.white.opacity(0.2),
+                    Color.white.opacity(0.12)
                 ],
                 startPoint: .bottom,
                 endPoint: .top
@@ -47,19 +41,19 @@ struct RecordingWindowContent: View {
         }
     }
 
-    private var separatorColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
-    }
-
     var body: some View {
         ZStack {
-            // Subtle glow when recording
+            // Background
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(Color(red: 0.08, green: 0.08, blue: 0.1))
+
+            // Warm glow when recording
             if appState.isRecording {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(
                         RadialGradient(
                             colors: [
-                                Color.red.opacity(glowOpacity * 0.15),
+                                goldDark.opacity(glowOpacity * 0.12),
                                 Color.clear
                             ],
                             center: .center,
@@ -84,24 +78,55 @@ struct RecordingWindowContent: View {
                 }
 
                 Rectangle()
-                    .fill(separatorColor)
+                    .fill(goldDark.opacity(0.12))
                     .frame(height: 0.5)
 
                 bottomToolbar
             }
 
-            // Inner highlight
-            RoundedRectangle(cornerRadius: cornerRadius - 1)
-                .stroke(innerBorderColor, lineWidth: 1)
-                .padding(1)
-
-            // Border overlay
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(borderColor, lineWidth: 1)
+            // Border — shimmer when processing, static otherwise
+            if coordinator.state == .processing || coordinator.state == .transcribing {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(
+                        AngularGradient(
+                            colors: [
+                                goldLight.opacity(0.6),
+                                goldDark.opacity(0.1),
+                                Color.clear,
+                                Color.clear,
+                                goldDark.opacity(0.1),
+                                goldLight.opacity(0.6),
+                            ],
+                            center: .center,
+                            angle: .degrees(shimmerRotation)
+                        ),
+                        lineWidth: 1.5
+                    )
+            } else {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [goldDark.opacity(0.35), goldDark.opacity(0.12)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            }
         }
         .frame(width: 380, height: 140)
+        .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
         .onReceive(audioEngine.$currentLevel) { level in
             updateWaveform(level: level)
+        }
+        .onChange(of: coordinator.state) { newState in
+            if newState == .processing || newState == .transcribing {
+                withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+                    shimmerRotation = 360
+                }
+            } else {
+                shimmerRotation = 0
+            }
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
@@ -114,11 +139,9 @@ struct RecordingWindowContent: View {
 
     private var waveformArea: some View {
         ZStack {
-            // Waveform visualization - centered
             waveformVisualization
                 .padding(.horizontal, 12)
 
-            // Recording indicator (pulsing dot) - top left
             if appState.isRecording {
                 VStack {
                     HStack {
@@ -136,24 +159,22 @@ struct RecordingWindowContent: View {
 
     private var recordingIndicator: some View {
         ZStack {
-            // Outer glow ring
             Circle()
-                .fill(Color.red.opacity(0.2))
+                .fill(goldLight.opacity(0.2))
                 .frame(width: 16, height: 16)
                 .scaleEffect(pulseScale)
 
-            // Inner solid dot
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Color(red: 1.0, green: 0.35, blue: 0.35), Color.red],
+                        colors: [goldLight, goldDark],
                         center: .center,
                         startRadius: 0,
                         endRadius: 5
                     )
                 )
                 .frame(width: 8, height: 8)
-                .shadow(color: Color.red.opacity(0.6), radius: 4)
+                .shadow(color: goldLight.opacity(0.6), radius: 4)
         }
         .onAppear {
             withAnimation(
@@ -167,8 +188,8 @@ struct RecordingWindowContent: View {
 
     private var waveformVisualization: some View {
         GeometryReader { geometry in
-            HStack(spacing: 3) {
-                ForEach(0..<waveformLevels.count, id: \.self) { index in
+            HStack(spacing: 2) {
+                ForEach(0..<mirroredLevels.count, id: \.self) { index in
                     waveformBar(for: index)
                 }
             }
@@ -177,23 +198,31 @@ struct RecordingWindowContent: View {
         .animation(.spring(response: 0.1, dampingFraction: 0.7), value: waveformLevels)
     }
 
-    private func waveformBar(for index: Int) -> some View {
-        let height = barHeight(for: index)
-
-        return RoundedRectangle(cornerRadius: 2)
-            .fill(waveformGradient)
-            .frame(width: 3, height: height)
+    // Mirror levels: center is newest, spreads outward both sides
+    private var mirroredLevels: [CGFloat] {
+        let half = Array(waveformLevels.suffix(30).reversed())
+        return half.reversed() + half
     }
 
-    private func barHeight(for index: Int) -> CGFloat {
+    private func waveformBar(for index: Int) -> some View {
+        let levels = mirroredLevels
+        let height = barHeight(level: levels[index], index: index, total: levels.count)
+
+        return RoundedRectangle(cornerRadius: 1)
+            .fill(waveformGradient)
+            .frame(width: 2, height: height)
+    }
+
+    private func barHeight(level: CGFloat, index: Int, total: Int) -> CGFloat {
         guard appState.isRecording else {
-            // Idle state - subtle wave pattern
-            let wave = sin(Double(index) * 0.3) * 2 + 4
+            // Idle: gentle curve peaking at center
+            let center = Double(total) / 2.0
+            let dist = abs(Double(index) - center) / center
+            let wave = (1.0 - dist) * 4 + 3
             return CGFloat(wave)
         }
 
-        let level = waveformLevels[index]
-        return max(4, min(45, level * 55))
+        return max(3, min(45, level * 55))
     }
 
     private func updateWaveform(level: Float) {
@@ -202,7 +231,6 @@ struct RecordingWindowContent: View {
         var newLevels = waveformLevels
         newLevels.removeFirst()
 
-        // Smoothed variation for organic feel
         let baseLevel = CGFloat(level)
         let variation = CGFloat.random(in: 0.8...1.2)
         newLevels.append(baseLevel * variation)
@@ -218,8 +246,9 @@ struct RecordingWindowContent: View {
         HStack(spacing: 12) {
             Image(systemName: "brain")
                 .font(.system(size: 24))
-                .foregroundColor(coordinator.state == .processing ? .purple : .blue)
+                .foregroundColor(goldLight)
                 .opacity(brainOpacity)
+                .shadow(color: goldLight.opacity(0.4), radius: 6)
                 .onAppear {
                     withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                         brainOpacity = 1.0
@@ -232,11 +261,11 @@ struct RecordingWindowContent: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(coordinator.state == .transcribing ? "Transcribing..." : "Thinking...")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundColor(warmWhite)
 
                 Text(coordinator.state == .transcribing ? "Converting speech to text" : "Processing with AI")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(warmWhite.opacity(0.5))
             }
 
             Spacer()
@@ -248,21 +277,19 @@ struct RecordingWindowContent: View {
 
     private var bottomToolbar: some View {
         HStack(spacing: 0) {
-            // App branding - minimal
             HStack(spacing: 6) {
                 Image(systemName: "waveform")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary.opacity(0.6))
+                    .foregroundColor(goldDark.opacity(0.5))
 
                 Text("Yapper")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundColor(goldDark.opacity(0.4))
             }
             .padding(.leading, 18)
 
             Spacer()
 
-            // Action hints with refined key caps
             HStack(spacing: 16) {
                 ActionBadge(label: "Stop", keys: ["⌥", "Space"])
                 ActionBadge(label: "Cancel", keys: ["esc"])
@@ -278,13 +305,14 @@ struct RecordingWindowContent: View {
 struct ActionBadge: View {
     let label: String
     let keys: [String]
-    @Environment(\.colorScheme) var colorScheme
+
+    private let goldDark = Color(red: 0.55, green: 0.55, blue: 0.6)
 
     var body: some View {
         HStack(spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.primary.opacity(0.6))
+                .foregroundColor(Color.white.opacity(0.45))
 
             HStack(spacing: 3) {
                 ForEach(keys, id: \.self) { key in
@@ -299,26 +327,23 @@ struct ActionBadge: View {
 
 struct KeyCap: View {
     let key: String
-    @Environment(\.colorScheme) var colorScheme
+
+    private let goldDark = Color(red: 0.55, green: 0.55, blue: 0.6)
 
     var body: some View {
         Text(key)
             .font(.system(size: 10, weight: .semibold, design: .rounded))
-            .foregroundColor(colorScheme == .dark ? .white.opacity(0.65) : .black.opacity(0.55))
+            .foregroundColor(Color.white.opacity(0.55))
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.07))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(
-                        colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08),
-                        lineWidth: 0.5
-                    )
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(goldDark.opacity(0.2), lineWidth: 0.5)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
     }
 }
 
@@ -329,7 +354,7 @@ typealias RecordingWindow = RecordingWindowContent
 
 #Preview {
     ZStack {
-        Color.gray.opacity(0.2)
+        Color.black
             .ignoresSafeArea()
 
         RecordingWindowContent()
