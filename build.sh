@@ -63,6 +63,19 @@ EXECUTABLE="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 # Update rpaths in executable to look in Frameworks folder
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$EXECUTABLE" 2>/dev/null || true
 
+# Remove hardcoded local rpaths that don't exist on other machines
+otool -l "$EXECUTABLE" | grep -A2 LC_RPATH | grep "path " | sed 's/.*path \(.*\) (offset.*/\1/' | while read -r rpath; do
+    case "$rpath" in
+        @*) ;;                    # keep @executable_path, @loader_path
+        /usr/lib/*) ;;            # keep system paths
+        /System/*) ;;             # keep system paths
+        /Applications/Xcode*) ;;  # keep Xcode toolchain paths
+        *)  install_name_tool -delete_rpath "$rpath" "$EXECUTABLE" 2>/dev/null || true
+            echo "  Removed rpath: $rpath"
+            ;;
+    esac
+done
+
 # Fix each library reference in the executable
 install_name_tool -change "@rpath/libwhisper.1.dylib" "@executable_path/../Frameworks/libwhisper.1.dylib" "$EXECUTABLE"
 install_name_tool -change "@rpath/libggml.0.dylib" "@executable_path/../Frameworks/libggml.0.dylib" "$EXECUTABLE"
