@@ -14,8 +14,6 @@ Dictation app for macOS. Talk, and it types. Whisper runs locally on your Mac. I
 
 <p align="center">
   <img src="website/assets/classic-ui.png" width="420" alt="Yapper recording window">
-  &nbsp;&nbsp;
-  <img src="website/assets/mini-ui.png" width="100" alt="Yapper mini mode">
 </p>
 
 ---
