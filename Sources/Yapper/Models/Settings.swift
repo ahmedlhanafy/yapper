@@ -61,6 +61,9 @@ struct Settings: Codable {
     // Notifications
     var showToastNotifications: Bool
 
+    // Developer
+    var demoMode: Bool
+
 
     init() {
         self.startAtLogin = false
@@ -86,6 +89,7 @@ struct Settings: Codable {
         self.ollamaBaseURL = "http://localhost:11434"
 
         self.showToastNotifications = true
+        self.demoMode = false
     }
 
     static func defaultStorageLocation() -> String {
@@ -131,6 +135,7 @@ enum KeyModifier: String, Codable {
     case option
     case control
     case shift
+    case fn
 
     var symbol: String {
         switch self {
@@ -138,15 +143,17 @@ enum KeyModifier: String, Codable {
         case .option: return "⌥"
         case .control: return "⌃"
         case .shift: return "⇧"
+        case .fn: return "🌐"
         }
     }
 
     var carbonFlag: UInt32 {
         switch self {
-        case .command: return 0x0100 // cmdKey
-        case .option: return 0x0800 // optionKey
-        case .control: return 0x1000 // controlKey
-        case .shift: return 0x0200 // shiftKey
+        case .command: return 0x0100
+        case .option: return 0x0800
+        case .control: return 0x1000
+        case .shift: return 0x0200
+        case .fn: return 0 // handled via NSEvent monitor, not Carbon
         }
     }
 }

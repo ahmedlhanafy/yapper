@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 
+// Shared state between sidebar and detail
 class SettingsViewState: ObservableObject {
     @Published var selectedTab: SettingsView.Tab?
 
@@ -9,19 +10,8 @@ class SettingsViewState: ObservableObject {
     }
 }
 
-struct SettingsView: View {
-    @ObservedObject var appState = AppState.shared
-    @ObservedObject private var viewState: SettingsViewState
-
-    var selectedTab: SettingsView.Tab? {
-        get { viewState.selectedTab }
-        nonmutating set { viewState.selectedTab = newValue }
-    }
-
-    init(initialTab: Tab = .general) {
-        self._viewState = ObservedObject(wrappedValue: SettingsViewState(tab: initialTab))
-    }
-
+// Namespace for Tab enum and convenience
+enum SettingsView {
     enum Tab: String, CaseIterable, Identifiable {
         case general = "General"
         case shortcuts = "Shortcuts"
@@ -45,104 +35,62 @@ struct SettingsView: View {
             }
         }
 
-        var iconColor: Color {
-            switch self {
-            case .general: return .gray
-            case .shortcuts: return .blue
-            case .modes: return .purple
-            case .audio: return .orange
-            case .apiKeys: return .green
-            case .advanced: return .pink
-            case .history: return .red
-            }
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 0) {
-            // Sidebar
-            VStack(alignment: .leading, spacing: 0) {
-                // Spacer for traffic light area
-                Spacer()
-                    .frame(height: 38)
-
-                VStack(spacing: 2) {
-                    ForEach(Tab.allCases) { tab in
-                        sidebarRow(tab)
-                    }
-                }
-                .padding(.horizontal, 12)
-
-                Spacer()
-            }
-            .frame(width: 190)
-            .background(Color(nsColor: .windowBackgroundColor))
-
-            // Divider
-            Rectangle()
-                .fill(Color(nsColor: .separatorColor))
-                .frame(width: 1)
-
-            // Content
-            VStack(spacing: 0) {
-                // Titlebar spacer to match sidebar
-                Spacer()
-                    .frame(height: 38)
-
-                Divider()
-
-                // Content area
-                if let tab = selectedTab {
-                    contentView(for: tab)
-                } else {
-                    Spacer()
-                    Text("Select a category")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .controlBackgroundColor))
-        }
-        .frame(minWidth: 700, minHeight: 500)
-        .edgesIgnoringSafeArea(.top)
-        .onExitCommand {
-            NSApp.keyWindow?.close()
-        }
-    }
-
-    private func sidebarRow(_ tab: Tab) -> some View {
-        Button {
-            selectedTab = tab
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: tab.icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 26, height: 26)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(tab.iconColor)
-                    )
-
-                Text(tab.rawValue)
-                    .font(.system(size: 13))
-                    .foregroundColor(selectedTab == tab ? .primary : .secondary)
-
-                Spacer()
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(selectedTab == tab ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.15) : Color.clear)
+        var iconGradient: LinearGradient {
+            return LinearGradient(
+                colors: [
+                    Color(nsColor: NSColor(calibratedRed: 0.5, green: 0.5, blue: 0.55, alpha: 1.0)),
+                    Color(nsColor: NSColor(calibratedRed: 0.35, green: 0.35, blue: 0.4, alpha: 1.0))
+                ],
+                startPoint: .top,
+                endPoint: .bottom
             )
         }
-        .buttonStyle(.plain)
+    }
+}
+
+// Sidebar view (left pane)
+struct SettingsSidebarView: View {
+    @ObservedObject var viewState: SettingsViewState
+
+    var body: some View {
+        List(SettingsView.Tab.allCases, selection: $viewState.selectedTab) { tab in
+            Label {
+                Text(tab.rawValue)
+            } icon: {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(tab.iconGradient)
+                    )
+            }
+            .tag(tab)
+        }
+        .listStyle(.sidebar)
+        .tint(Color(nsColor: NSColor(calibratedRed: 0.3, green: 0.3, blue: 0.38, alpha: 1.0)))
+    }
+}
+
+// Detail view (right pane)
+struct SettingsDetailView: View {
+    @ObservedObject var viewState: SettingsViewState
+
+    var body: some View {
+        Group {
+            if let tab = viewState.selectedTab {
+                contentView(for: tab)
+            } else {
+                Text("Select a category")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
     }
 
     @ViewBuilder
-    private func contentView(for tab: Tab) -> some View {
+    private func contentView(for tab: SettingsView.Tab) -> some View {
         switch tab {
         case .general:
             GeneralSettingsView()
@@ -715,6 +663,30 @@ struct AdvancedSettingsView: View {
 
                 Divider()
 
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Developer")
+                            .font(.headline)
+
+                        Toggle("Demo Mode", isOn: Binding(
+                            get: { appState.settings.demoMode },
+                            set: { enabled in
+                                appState.settings.demoMode = enabled
+                                appState.saveSettings()
+                                if enabled {
+                                    MiniRecordingWindowController.shared.show()
+                                } else {
+                                    MiniRecordingWindowController.shared.hide()
+                                }
+                            }
+                        ))
+                        .help("Show recording window with animated waveform for screenshots")
+
+                        Text("Shows the recording window with a pulsing waveform. Useful for taking screenshots and demos.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
 
                 Divider()
 
@@ -878,6 +850,6 @@ struct StyleOptionButton: View {
 // MARK: - Preview
 
 #Preview {
-    SettingsView()
+    SettingsDetailView(viewState: SettingsViewState(tab: .general))
         .frame(width: 700, height: 600)
 }

@@ -241,78 +241,49 @@ class StorageManager {
     }
 }
 
-// MARK: - Keychain (for API keys)
+// MARK: - API Keys (file-based, no Keychain prompts)
 
 extension StorageManager {
-    private var keychainService: String { "com.yapper.apikeys" }
+    private var keysFileURL: URL {
+        defaultStorageURL.appendingPathComponent(".apikeys")
+    }
+
+    private func loadKeysFile() -> [String: String] {
+        guard let data = try? Data(contentsOf: keysFileURL),
+              let keys = try? JSONDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+        return keys
+    }
+
+    private func saveKeysFile(_ keys: [String: String]) {
+        try? FileManager.default.createDirectory(at: defaultStorageURL, withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(keys) {
+            try? data.write(to: keysFileURL, options: .atomic)
+            // Hide the file
+            var url = keysFileURL
+            var resourceValues = URLResourceValues()
+            resourceValues.isHidden = true
+            try? url.setResourceValues(resourceValues)
+        }
+    }
 
     func saveAPIKey(_ key: String, for provider: AIProvider) {
-        let account = provider.rawValue
-
-        // Delete existing
-        let deleteQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
-
-        // Create access that allows any app to read without prompting
-        var access: SecAccess?
-        var trustedApps: CFArray?
-        // Empty trusted apps list + no prompt = accessible by any process from this user
-        SecAccessCreate("Yapper API Key" as CFString, trustedApps, &access)
-
-        var addQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: key.data(using: .utf8)!
-        ]
-        if let access = access {
-            addQuery[kSecAttrAccess as String] = access
-        }
-
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
-        if status == errSecSuccess {
-            print("✓ API key saved for \(provider.displayName)")
-        } else {
-            print("⚠️ Failed to save API key: \(status)")
-        }
+        var keys = loadKeysFile()
+        keys[provider.rawValue] = key
+        saveKeysFile(keys)
+        print("✓ API key saved for \(provider.displayName)")
     }
 
     func loadAPIKey(for provider: AIProvider) -> String? {
-        let account = provider.rawValue
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true
-        ]
-
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        if status == errSecSuccess,
-           let data = result as? Data,
-           let key = String(data: data, encoding: .utf8) {
-            return key
-        }
-
-        return nil
+        let keys = loadKeysFile()
+        return keys[provider.rawValue]
     }
 
     func deleteAPIKey(for provider: AIProvider) {
-        let account = provider.rawValue
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: account
-        ]
-
-        SecItemDelete(query as CFDictionary)
+        var keys = loadKeysFile()
+        keys.removeValue(forKey: provider.rawValue)
+        saveKeysFile(keys)
         print("✓ API key deleted for \(provider.displayName)")
     }
 }

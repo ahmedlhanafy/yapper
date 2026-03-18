@@ -66,11 +66,15 @@ struct HotkeyRecorderView: View {
                 .buttonStyle(.bordered)
             }
         }
-        .overlay(
-            RecordingOverlay(
-                isRecording: $isRecording,
-                onKeyPress: handleKeyPress
-            )
+        .background(
+            Group {
+                if isRecording {
+                    RecordingOverlay(
+                        isRecording: $isRecording,
+                        onKeyPress: handleKeyPress
+                    )
+                }
+            }
         )
         .alert("Invalid Hotkey", isPresented: Binding(
             get: { validationError != nil },
@@ -98,6 +102,9 @@ struct HotkeyRecorderView: View {
         }
         if currentModifiers.contains(.control) {
             parts.append("⌃")
+        }
+        if currentModifiers.contains(.function) {
+            parts.append("🌐")
         }
 
         if let keyCode = currentKeyCode {
@@ -144,6 +151,9 @@ struct HotkeyRecorderView: View {
         if currentModifiers.contains(.control) {
             modifiers.append(.control)
         }
+        if currentModifiers.contains(.function) {
+            modifiers.append(.fn)
+        }
 
         hotkey = Hotkey(
             keyCode: keyCode,
@@ -152,7 +162,7 @@ struct HotkeyRecorderView: View {
     }
 
     private func handleKeyPress(event: NSEvent) {
-        currentModifiers = event.modifierFlags.intersection([.command, .option, .shift, .control])
+        currentModifiers = event.modifierFlags.intersection([.command, .option, .shift, .control, .function])
 
         // Only record non-modifier keys
         let keyCode = event.keyCode
@@ -217,15 +227,26 @@ class RecordingNSView: NSView {
 
     override var acceptsFirstResponder: Bool { true }
 
+    private var globalMonitor: Any?
+
     private func startMonitoring() {
-        // Become first responder to receive key events
+        // Make the window key so we can capture events
+        window?.makeKey()
         window?.makeFirstResponder(self)
 
-        // Also monitor global events as backup
+        // Local monitor for events when the window is key
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let self = self, self.isRecording else { return event }
             self.onKeyPress?(event)
-            return nil // Consume the event
+            return nil
+        }
+
+        // Global monitor as fallback when window isn't key
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
+            guard let self = self, self.isRecording else { return }
+            DispatchQueue.main.async {
+                self.onKeyPress?(event)
+            }
         }
     }
 
@@ -233,6 +254,10 @@ class RecordingNSView: NSView {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
+        }
+        if let globalMonitor = globalMonitor {
+            NSEvent.removeMonitor(globalMonitor)
+            self.globalMonitor = nil
         }
     }
 

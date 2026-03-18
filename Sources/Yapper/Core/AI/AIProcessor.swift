@@ -121,14 +121,20 @@ class AIProcessor {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body: [String: Any] = [
+        // GPT-5+ and o-series models don't support temperature or max_tokens
+        let isGpt5Plus = model.hasPrefix("gpt-5") || model.hasPrefix("o1") || model.hasPrefix("o3") || model.hasPrefix("o4")
+        var body: [String: Any] = [
             "model": model,
             "messages": [
                 ["role": "user", "content": prompt]
             ],
-            "temperature": 0.3,
-            "max_tokens": 2000
         ]
+        if !isGpt5Plus {
+            body["temperature"] = 0.3
+            body["max_tokens"] = 2000
+        } else {
+            body["max_completion_tokens"] = 2000
+        }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

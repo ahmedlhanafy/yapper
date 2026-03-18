@@ -1,5 +1,6 @@
 import Foundation
 import Carbon
+import AppKit
 
 /// Manages global hotkey registration for recording and mode switching
 class HotkeyManager {
@@ -9,6 +10,9 @@ class HotkeyManager {
     private var cycleModeHotkeyRef: EventHotKeyRef?
 
     private var eventHandler: EventHandlerRef?
+    private var fnMonitor: Any?
+    private var fnPressed = false
+    private var cycleRecordTimer: Timer?
 
     private init() {}
 
@@ -18,12 +22,79 @@ class HotkeyManager {
         let settings = AppState.shared.settings
 
         if let recordingHotkey = settings.recordingHotkey {
-            registerRecordingHotkey(recordingHotkey)
+            // Check if it uses Fn modifier
+            if recordingHotkey.modifiers.contains(.fn) {
+                registerFnHotkey(recordingHotkey)
+            } else {
+                registerRecordingHotkey(recordingHotkey)
+            }
         }
 
         if let cycleModeHotkey = settings.cycleModeHotkey {
             registerCycleModeHotkey(cycleModeHotkey)
         }
+    }
+
+    // MARK: - Fn Key Support
+
+    private func registerFnHotkey(_ hotkey: Hotkey) {
+        unregisterFnMonitor()
+
+        // Fn key can't use Carbon hotkeys — use NSEvent global monitor
+        fnMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handleFnEvent(event, hotkey: hotkey)
+        }
+
+        // Also monitor locally
+        let localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handleFnEvent(event, hotkey: hotkey)
+            return event
+        }
+        // Store as second monitor
+        fnLocalMonitor = localMonitor
+
+        print("✓ Registered Fn-based hotkey: \(hotkey.displayString)")
+    }
+
+    private var fnLocalMonitor: Any?
+
+    private func handleFnEvent(_ event: NSEvent, hotkey: Hotkey) {
+        let fnDown = event.modifierFlags.contains(.function)
+
+        // Check if other required modifiers are held
+        let requiredMet = hotkey.modifiers.allSatisfy { mod in
+            switch mod {
+            case .fn: return true // already checking fn
+            case .command: return event.modifierFlags.contains(.command)
+            case .option: return event.modifierFlags.contains(.option)
+            case .control: return event.modifierFlags.contains(.control)
+            case .shift: return event.modifierFlags.contains(.shift)
+            }
+        }
+
+        guard requiredMet else { return }
+
+        if fnDown && !fnPressed {
+            fnPressed = true
+            DispatchQueue.main.async {
+                print("🎤 Fn hotkey pressed - START recording")
+                SoundManager.shared.playStartSound()
+                RecordingCoordinator.shared.startRecording()
+            }
+        } else if !fnDown && fnPressed {
+            fnPressed = false
+            DispatchQueue.main.async {
+                print("🎤 Fn hotkey released - STOP recording")
+                SoundManager.shared.playStopSound()
+                RecordingCoordinator.shared.stopRecording()
+            }
+        }
+    }
+
+    private func unregisterFnMonitor() {
+        if let m = fnMonitor { NSEvent.removeMonitor(m); fnMonitor = nil }
+        if let m = fnLocalMonitor { NSEvent.removeMonitor(m); fnLocalMonitor = nil }
+        fnPressed = false
     }
 
     func registerRecordingHotkey(_ hotkey: Hotkey) {
@@ -167,14 +238,19 @@ class HotkeyManager {
 
             print("🔄 Switched to mode: \(nextMode.name)")
 
-            // Show notification
-            showModeChangeNotification(nextMode.name)
-        }
-    }
+            // Show the recording window so user sees the mode name
+            MiniRecordingWindowController.shared.show()
 
-    private func showModeChangeNotification(_ modeName: String) {
-        // TODO: Show HUD notification
-        print("Mode: \(modeName)")
+            // Reset the debounce timer — if no more presses for 1.5s, start recording
+            cycleRecordTimer?.invalidate()
+            cycleRecordTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { _ in
+                DispatchQueue.main.async {
+                    print("🎤 Auto-starting recording in mode: \(AppState.shared.currentMode.name)")
+                    SoundManager.shared.playStartSound()
+                    RecordingCoordinator.shared.startRecording()
+                }
+            }
+        }
     }
 
     // MARK: - Unregistration
@@ -196,6 +272,7 @@ class HotkeyManager {
     func unregisterAll() {
         unregisterRecordingHotkey()
         unregisterCycleModeHotkey()
+        unregisterFnMonitor()
 
         if let handler = eventHandler {
             RemoveEventHandler(handler)

@@ -193,11 +193,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func menuBarButtonClicked() {
         guard let event = NSApp.currentEvent else { return }
 
-        if event.type == .rightMouseUp {
-            // Right click - show menu
+        if event.type == .rightMouseUp || !AppState.shared.settings.recordOnMenubarClick {
+            // Right click or recordOnMenubarClick disabled - show menu
             menuBarController?.showMenu()
         } else {
-            // Left click - toggle recording
+            // Left click with recordOnMenubarClick enabled - toggle recording
             RecordingCoordinator.shared.toggleRecording()
         }
     }

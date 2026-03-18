@@ -12,22 +12,12 @@ class MenuBarController {
     }
 
     func showMenu() {
-        statusItem?.button?.performClick(nil)
+        guard let button = statusItem?.button, let menu = menu else { return }
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 5), in: button)
     }
 
     private func buildMenu() {
         let menu = NSMenu()
-
-        // Recording status
-        let statusItem = NSMenuItem(
-            title: "Status: Idle",
-            action: nil,
-            keyEquivalent: ""
-        )
-        statusItem.isEnabled = false
-        menu.addItem(statusItem)
-
-        menu.addItem(NSMenuItem.separator())
 
         // Start/Stop Recording
         let recordItem = NSMenuItem(
@@ -95,9 +85,8 @@ class MenuBarController {
         menu.addItem(quitItem)
 
         self.menu = menu
-        if let item = self.statusItem {
-            item.menu = menu
-        }
+        // Don't set item.menu — we show it manually on right-click
+        // so left-click can toggle recording
 
         // Update menu dynamically
         setupMenuUpdates()
@@ -111,33 +100,10 @@ class MenuBarController {
     }
 
     private func updateMenuStatus() {
-        guard let menu = menu,
-              let statusItem = menu.item(at: 0) else { return }
+        guard let menu = menu else { return }
 
-        let state = AppState.shared.processingState
-        let statusText: String
-
-        switch state {
-        case .idle:
-            statusText = "Status: Idle"
-        case .recording:
-            statusText = "Status: Recording..."
-        case .transcribing:
-            statusText = "Status: Transcribing..."
-        case .processing:
-            statusText = "Status: Processing..."
-        case .inserting:
-            statusText = "Status: Inserting..."
-        case .done:
-            statusText = "Status: Done ✓"
-        case .error:
-            statusText = "Status: Error"
-        }
-
-        statusItem.title = statusText
-
-        // Update recording menu item
-        if let recordItem = menu.item(at: 2) {
+        // Update recording menu item (first item)
+        if let recordItem = menu.item(at: 0) {
             recordItem.title = AppState.shared.isRecording ? "Stop Recording" : "Start Recording"
         }
 
@@ -177,35 +143,92 @@ class MenuBarController {
 
 // MARK: - Window Helpers
 
-class SettingsWindow {
-    static private var window: NSWindow?
-    static private var settingsView: SettingsView?
+class SettingsWindow: NSObject, NSToolbarDelegate {
+    static let shared = SettingsWindow()
+    private var window: NSWindow?
+    private var viewState: SettingsViewState?
+    private var splitVC: NSSplitViewController?
 
     static func show(tab: SettingsView.Tab? = nil) {
+        shared._show(tab: tab)
+    }
+
+    private func _show(tab: SettingsView.Tab? = nil) {
         if let existing = window {
             if let tab = tab {
-                settingsView?.selectedTab = tab
+                viewState?.selectedTab = tab
             }
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
-        let view = SettingsView(initialTab: tab ?? .general)
-        settingsView = view
-        let hostingController = NSHostingController(rootView: view)
-        let window = NSWindow(contentViewController: hostingController)
+        // Shared state
+        let state = SettingsViewState(tab: tab ?? .general)
+        self.viewState = state
 
-        window.title = "Settings"
+        // Sidebar
+        let sidebarView = SettingsSidebarView(viewState: state)
+        let sidebarVC = NSHostingController(rootView: sidebarView)
+
+        // Detail
+        let detailView = SettingsDetailView(viewState: state)
+        let detailVC = NSHostingController(rootView: detailView)
+
+        // Split view controller
+        let splitVC = NSSplitViewController()
+        self.splitVC = splitVC
+
+        let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebarVC)
+        sidebarItem.minimumThickness = 180
+        sidebarItem.maximumThickness = 260
+        sidebarItem.canCollapse = false
+
+        let detailItem = NSSplitViewItem(viewController: detailVC)
+        detailItem.minimumThickness = 400
+
+        splitVC.addSplitViewItem(sidebarItem)
+        splitVC.addSplitViewItem(detailItem)
+
+        // Window
+        let window = NSWindow(contentViewController: splitVC)
+        window.title = ""
         window.setContentSize(NSSize(width: 700, height: 500))
         window.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
-        window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
-        window.center()
 
+        // Toolbar with tracking separator
+        let toolbar = NSToolbar(identifier: "SettingsToolbar")
+        toolbar.delegate = self
+        toolbar.showsBaselineSeparator = false
+        toolbar.displayMode = .iconOnly
+        window.toolbar = toolbar
+
+        window.center()
         self.window = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - NSToolbarDelegate
+
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.sidebarTrackingSeparator]
+    }
+
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.sidebarTrackingSeparator]
+    }
+
+    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        if itemIdentifier == .sidebarTrackingSeparator, let splitView = splitVC?.splitView {
+            return NSTrackingSeparatorToolbarItem(
+                identifier: itemIdentifier,
+                splitView: splitView,
+                dividerIndex: 0
+            )
+        }
+        return nil
     }
 }

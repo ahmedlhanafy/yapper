@@ -10,6 +10,9 @@ struct RecordingWindowContent: View {
     @State private var pulseScale: CGFloat = 1.0
     @State private var glowOpacity: Double = 0.3
     @State private var shimmerRotation: Double = 0
+    @State private var demoTimer: Timer?
+
+    private var isDemoMode: Bool { appState.settings.demoMode }
 
     private let cornerRadius: CGFloat = 20
 
@@ -23,7 +26,7 @@ struct RecordingWindowContent: View {
     }
 
     private var waveformGradient: LinearGradient {
-        if appState.isRecording {
+        if appState.isRecording || isDemoMode {
             return LinearGradient(
                 colors: [goldDark, goldLight],
                 startPoint: .bottom,
@@ -47,8 +50,8 @@ struct RecordingWindowContent: View {
             RoundedRectangle(cornerRadius: cornerRadius)
                 .fill(Color(red: 0.08, green: 0.08, blue: 0.1))
 
-            // Warm glow when recording
-            if appState.isRecording {
+            // Warm glow when recording or demo
+            if appState.isRecording || isDemoMode {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(
                         RadialGradient(
@@ -65,7 +68,12 @@ struct RecordingWindowContent: View {
 
             // Content
             VStack(spacing: 0) {
-                if coordinator.state == .processing || coordinator.state == .transcribing {
+                if case .error(let message) = coordinator.state {
+                    errorOverlay(message: message)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 18)
+                        .padding(.bottom, 12)
+                } else if coordinator.state == .processing || coordinator.state == .transcribing {
                     processingOverlay
                         .padding(.horizontal, 20)
                         .padding(.top, 18)
@@ -132,7 +140,33 @@ struct RecordingWindowContent: View {
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                 glowOpacity = 0.6
             }
+            startDemoTimerIfNeeded()
         }
+        .onChange(of: isDemoMode) { demo in
+            if demo { startDemoTimerIfNeeded() } else { stopDemoTimer() }
+        }
+        .onDisappear { stopDemoTimer() }
+    }
+
+    private func startDemoTimerIfNeeded() {
+        guard isDemoMode, demoTimer == nil else { return }
+        demoTimer = Timer.scheduledTimer(withTimeInterval: 0.07, repeats: true) { [self] _ in
+            var newLevels = self.waveformLevels
+            newLevels.removeFirst()
+            let t: Double = Date().timeIntervalSinceReferenceDate
+            let a: CGFloat = CGFloat(sin(t * 3.5)) * 0.25
+            let b: CGFloat = CGFloat(sin(t * 7.2)) * 0.15
+            let c: CGFloat = CGFloat(sin(t * 11.0)) * 0.1
+            let level: CGFloat = 0.3 + a + b + c
+            let jitter: CGFloat = CGFloat.random(in: 0.85...1.15)
+            newLevels.append(level * jitter)
+            self.waveformLevels = newLevels
+        }
+    }
+
+    private func stopDemoTimer() {
+        demoTimer?.invalidate()
+        demoTimer = nil
     }
 
     // MARK: - Waveform Area
@@ -142,7 +176,7 @@ struct RecordingWindowContent: View {
             waveformVisualization
                 .padding(.horizontal, 12)
 
-            if appState.isRecording {
+            if appState.isRecording || isDemoMode {
                 VStack {
                     HStack {
                         recordingIndicator
@@ -214,7 +248,7 @@ struct RecordingWindowContent: View {
     }
 
     private func barHeight(level: CGFloat, index: Int, total: Int) -> CGFloat {
-        guard appState.isRecording else {
+        guard appState.isRecording || isDemoMode else {
             // Idle: gentle curve peaking at center
             let center = Double(total) / 2.0
             let dist = abs(Double(index) - center) / center
@@ -236,6 +270,24 @@ struct RecordingWindowContent: View {
         newLevels.append(baseLevel * variation)
 
         waveformLevels = newLevels
+    }
+
+    // MARK: - Error Overlay
+
+    private func errorOverlay(message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 20))
+                .foregroundColor(.red)
+
+            Text(message)
+                .font(.system(size: 11))
+                .foregroundColor(warmWhite.opacity(0.8))
+                .lineLimit(3)
+
+            Spacer()
+        }
+        .frame(height: 65)
     }
 
     // MARK: - Processing Overlay
@@ -282,9 +334,9 @@ struct RecordingWindowContent: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(goldDark.opacity(0.5))
 
-                Text("Yapper")
+                Text(appState.currentMode.name)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(goldDark.opacity(0.4))
+                    .foregroundColor(goldDark.opacity(0.5))
             }
             .padding(.leading, 18)
 

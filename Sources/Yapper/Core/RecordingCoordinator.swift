@@ -2,6 +2,8 @@ import Foundation
 import AppKit
 import Combine
 
+private struct AITimeoutError: Error {}
+
 /// Coordinates the entire dictation workflow: Record → Transcribe → Process → Insert
 class RecordingCoordinator: ObservableObject {
     static let shared = RecordingCoordinator()
@@ -117,17 +119,26 @@ class RecordingCoordinator: ObservableObject {
         let contextSettings = mode.contextSettings
 
         do {
-            // Step 1: Transcribe
+            // Step 1: Transcribe + capture context in parallel
             await MainActor.run {
                 state = .transcribing
             }
 
-            let transcription = try await WhisperService.shared.transcribe(
+            async let transcriptionTask = WhisperService.shared.transcribe(
                 audioURL: audioURL,
                 model: mode.voiceSettings.model,
                 language: mode.voiceSettings.language
             )
 
+            // Capture app context while transcription runs
+            var capturedContext: CapturedContext? = startContext ?? CapturedContext()
+            if contextSettings.captureAppContext {
+                let appContext = ContextCapture.shared.captureContext(for: contextSettings)
+                capturedContext?.activeApp = appContext.activeApp
+            }
+            startContext = nil
+
+            let transcription = try await transcriptionTask
             print("✓ Transcription: \(transcription.text)")
 
             // Check for blank audio
@@ -141,19 +152,7 @@ class RecordingCoordinator: ObservableObject {
                 return
             }
 
-            // Step 2: Merge start context with app context (captured now)
-            var capturedContext: CapturedContext? = startContext ?? CapturedContext()
-
-            if contextSettings.captureAppContext {
-                // Capture current app context
-                let appContext = ContextCapture.shared.captureContext(for: contextSettings)
-                capturedContext?.activeApp = appContext.activeApp
-            }
-
-            // Clear start context after use
-            startContext = nil
-
-            // Step 3: AI Processing (if enabled)
+            // Step 2: AI Processing (if enabled)
             var processedOutput: String?
             var aiPrompt: String?
             var aiProvider: String?
@@ -165,22 +164,51 @@ class RecordingCoordinator: ObservableObject {
                     state = .processing
                 }
 
-                let result = try await AIProcessor.shared.process(
-                    transcript: transcription.text,
-                    mode: mode,
-                    context: capturedContext
-                )
+                // AI with timeout — fall back to raw transcript if too slow
+                let aiTimeout: UInt64 = 15_000_000_000 // 15 seconds
+                do {
+                    let result = try await withThrowingTaskGroup(of: ProcessingResult.self) { group in
+                        group.addTask {
+                            try await AIProcessor.shared.process(
+                                transcript: transcription.text,
+                                mode: mode,
+                                context: capturedContext
+                            )
+                        }
+                        group.addTask {
+                            try await Task.sleep(nanoseconds: aiTimeout)
+                            throw AITimeoutError()
+                        }
+                        let first = try await group.next()!
+                        group.cancelAll()
+                        return first
+                    }
 
-                processedOutput = result.output
-                aiPrompt = result.prompt
-                aiProvider = result.provider
-                aiModel = result.model
-                processingTime = result.processingTime
+                    processedOutput = result.output
+                    aiPrompt = result.prompt
+                    aiProvider = result.provider
+                    aiModel = result.model
+                    processingTime = result.processingTime
 
-                print("✓ AI processed: \(processedOutput?.prefix(50) ?? "")...")
+                    print("✓ AI processed: \(processedOutput?.prefix(50) ?? "")...")
+                } catch is AITimeoutError {
+                    print("⏱️ AI timed out after 15s, using raw transcript")
+                    await MainActor.run {
+                        UserNotificationService.shared.showToast("AI took too long, using raw transcription")
+                    }
+                } catch {
+                    print("⚠️ AI failed: \(error.localizedDescription), using raw transcript")
+                    await MainActor.run {
+                        UserNotificationService.shared.showToast("AI error, using raw transcription")
+                    }
+                }
             }
 
-            // Step 4: Create session record
+            // Step 3: Insert text immediately, save history in background
+            await MainActor.run {
+                state = .inserting
+            }
+
             let session = Session(
                 timestamp: recordingStartTime ?? Date(),
                 audioFilePath: audioURL.path,
@@ -196,30 +224,25 @@ class RecordingCoordinator: ObservableObject {
                 aiModel: aiModel
             )
 
-            // Save to history
-            StorageManager.shared.saveSession(session)
-
-            // Step 5: Insert/Copy output
-            await MainActor.run {
-                state = .inserting
-                currentSession = session
+            // Insert text first (user-facing), save history async
+            let finalOutput = session.finalOutput
+            async let _ = Task.detached {
+                StorageManager.shared.saveSession(session)
             }
 
-            try await insertOutput(session.finalOutput, behavior: mode.outputBehavior)
+            try await insertOutput(finalOutput, behavior: mode.outputBehavior)
 
-            // Done!
             await MainActor.run {
                 state = .done
-
-                // Show success notification
-                let wordCount = session.finalOutput.split(separator: " ").count
+                currentSession = session
+                let wordCount = finalOutput.split(separator: " ").count
                 UserNotificationService.shared.showToast(
                     ErrorMessages.transcriptionComplete(wordCount)
                 )
             }
 
-            // Reset after delay
-            try await Task.sleep(nanoseconds: 2_000_000_000)
+            // Reset after shorter delay
+            try await Task.sleep(nanoseconds: 1_500_000_000)
             await MainActor.run {
                 state = .idle
                 currentSession = nil

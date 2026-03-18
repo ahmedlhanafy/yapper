@@ -129,7 +129,7 @@ enum AIProvider: String, Codable, CaseIterable {
 
     var defaultModel: String {
         switch self {
-        case .openai: return "gpt-4o"
+        case .openai: return "gpt-4.1-mini"
         case .anthropic: return "claude-sonnet-4-6"
         case .ollama: return "llama3:latest"
         }
@@ -139,14 +139,18 @@ enum AIProvider: String, Codable, CaseIterable {
         switch self {
         case .openai:
             return [
-                ("gpt-4o", "GPT-4o"),
-                ("gpt-4o-mini", "GPT-4o Mini"),
+                ("gpt-5.4", "GPT-5.4 (Latest)"),
+                ("gpt-5.4-pro", "GPT-5.4 Pro"),
+                ("gpt-5.2", "GPT-5.2"),
+                ("gpt-5.1", "GPT-5.1"),
+                ("gpt-5", "GPT-5"),
+                ("gpt-5-mini", "GPT-5 Mini"),
+                ("gpt-5-nano", "GPT-5 Nano"),
                 ("gpt-4.1", "GPT-4.1"),
                 ("gpt-4.1-mini", "GPT-4.1 Mini"),
                 ("gpt-4.1-nano", "GPT-4.1 Nano"),
-                ("gpt-4-turbo", "GPT-4 Turbo"),
-                ("gpt-4", "GPT-4"),
-                ("gpt-3.5-turbo", "GPT-3.5 Turbo"),
+                ("gpt-4o", "GPT-4o"),
+                ("gpt-4o-mini", "GPT-4o Mini"),
                 ("o3", "o3 (Reasoning)"),
                 ("o4-mini", "o4-mini (Reasoning)"),
             ]
@@ -241,7 +245,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4o",
+            model: "gpt-4.1-mini",
             instructions: """
             Transform the transcribed voice message into a professional email.
             - Use proper greeting and closing
@@ -262,7 +266,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4o",
+            model: "gpt-4.1-mini",
             instructions: """
             Transform the transcribed voice message into a casual, friendly message.
             - Keep it conversational and natural
@@ -282,7 +286,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4o",
+            model: "gpt-4.1-mini",
             instructions: """
             Transform the transcribed voice into organized notes.
             - Create bullet points or numbered lists when appropriate
@@ -303,7 +307,7 @@ extension Mode {
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4o",
+            model: "gpt-4.1-mini",
             instructions: """
             Transform the meeting transcription into structured meeting notes.
             - Extract key decisions and action items
@@ -322,14 +326,14 @@ extension Mode {
     )
 
     static let superMode = Mode(
-        name: "Super",
-        key: "super",
+        name: "Smart",
+        key: "smart",
         isBuiltIn: true,
         voiceSettings: VoiceSettings(language: "auto", model: .largeV3Turbo),
         aiEnabled: true,
         aiSettings: AISettings(
             provider: .openai,
-            model: "gpt-4o",
+            model: "gpt-4.1-mini",
             instructions: """
             You are a context-aware text transformation assistant.
 

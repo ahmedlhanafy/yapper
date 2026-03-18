@@ -16,29 +16,34 @@ class TextInserter {
 
         print("⌨️ Inserting text at cursor...")
 
-        // Save current clipboard
-        let originalClipboard = NSPasteboard.general.string(forType: .string)
+        // Save current clipboard contents (all types)
+        let pasteboard = NSPasteboard.general
+        let originalChangeCount = pasteboard.changeCount
+        let originalClipboard = pasteboard.string(forType: .string)
 
         // Copy text to clipboard
         await MainActor.run {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
+            pasteboard.clearContents()
+            pasteboard.setString(text, forType: .string)
         }
 
-        // Small delay to ensure clipboard is updated
-        try await Task.sleep(nanoseconds: 50_000_000) // 50ms
+        // Wait for clipboard to settle
+        try await Task.sleep(nanoseconds: 80_000_000) // 80ms
 
         // Simulate Cmd+V
         try await simulatePaste()
 
-        // Wait for paste to complete
-        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        // Wait longer for the target app to read the clipboard
+        try await Task.sleep(nanoseconds: 500_000_000) // 500ms
 
         // Restore original clipboard
-        if let original = originalClipboard {
-            await MainActor.run {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(original, forType: .string)
+        await MainActor.run {
+            // Only restore if no one else changed the clipboard since our paste
+            if pasteboard.changeCount == originalChangeCount + 1 {
+                pasteboard.clearContents()
+                if let original = originalClipboard {
+                    pasteboard.setString(original, forType: .string)
+                }
             }
         }
 
