@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yapper — AI Dictation for macOS</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <style>
+        :root {
+            --bg: #09090b;
+            --surface: #111113;
+            --surface-2: #18181b;
+            --border: #27272a;
+            --silver: #a1a1aa;
+            --silver-bright: #d4d4d8;
+            --silver-dim: #71717a;
+            --white: #fafafa;
+            --glow: rgba(161, 161, 170, 0.08);
+            --font: 'Instrument Sans', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            background: var(--bg);
+        }
+
+        body {
+            font-family: var(--font);
+            color: var(--silver);
+            background: var(--bg);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Noise overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* ---- NAV ---- */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(20px) saturate(1.2);
+            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+            background: rgba(9, 9, 11, 0.8);
+            border-bottom: 1px solid rgba(39, 39, 42, 0.5);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .nav-brand img {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+
+        .nav-brand span {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--white);
+            letter-spacing: -0.3px;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .nav-links a {
+            font-size: 14px;
+            color: var(--silver-dim);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--white);
+        }
+
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            font-family: var(--font);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--bg);
+            background: var(--silver-bright);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-download:hover {
+            background: var(--white);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(161, 161, 170, 0.2);
+        }
+
+        /* ---- HERO ---- */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 40px 80px;
+            position: relative;
+        }
+
+        /* Radial glow behind icon */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(161, 161, 170, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 26px;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+            animation: float 6s ease-in-out infinite;
+            box-shadow:
+                0 0 0 1px rgba(161, 161, 170, 0.1),
+                0 20px 60px -20px rgba(0, 0, 0, 0.6);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .hero h1 {
+            font-size: clamp(48px, 8vw, 80px);
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: -2.5px;
+            line-height: 1;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--white) 0%, var(--silver-dim) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--silver-dim);
+            max-width: 480px;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            font-family: var(--font);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--silver);
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-secondary:hover {
+            color: var(--white);
+            border-color: var(--silver-dim);
+        }
+
+        .hero-meta {
+            margin-top: 20px;
+            font-size: 12px;
+            font-family: var(--mono);
+            color: var(--silver-dim);
+            opacity: 0.6;
+            position: relative;
+            z-index: 1;
+        }
+
+        .install-note {
+            margin-top: 24px;
+            max-width: 520px;
+            text-align: left;
+            position: relative;
+            z-index: 1;
+        }
+
+        .install-note summary {
+            font-size: 12px;
+            color: var(--silver-dim);
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .install-note summary:hover {
+            color: var(--silver);
+        }
+
+        .install-note p {
+            font-size: 12px;
+            color: var(--silver-dim);
+            margin: 12px 0 8px;
+            line-height: 1.5;
+        }
+
+        .install-note code {
+            display: block;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--silver);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin: 8px 0 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+            user-select: all;
+        }
+
+        /* ---- SHOWCASE ---- */
+        .showcase {
+            padding: 0 40px 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .showcase-tabs {
+            display: flex;
+            gap: 2px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 40px;
+        }
+
+        .showcase-tab {
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--silver-dim);
+            background: transparent;
+            border: none;
+            border-radius: 7px;
+            padding: 7px 20px;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .showcase-tab:hover {
+            color: var(--silver-bright);
+        }
+
+        .showcase-tab.active {
+            color: var(--white);
+            background: var(--surface-2);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .showcase-stage {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            perspective: 1000px;
+        }
+
+        .showcase-stage::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 200px;
+            background: radial-gradient(ellipse, rgba(161, 161, 170, 0.06) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .showcase-view {
+            position: absolute;
+            transition: opacity 0.5s cubic-bezier(0.2, 0, 0, 1), transform 0.5s cubic-bezier(0.2, 0, 0, 1);
+        }
+
+        .showcase-view.hidden {
+            opacity: 0;
+            transform: scale(0.95) translateY(10px);
+            pointer-events: none;
+        }
+
+        .showcase-view.visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .showcase-classic {
+            border-radius: 20px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow:
+                0 0 0 1px rgba(161, 161, 170, 0.1),
+                0 4px 16px rgba(0, 0, 0, 0.3),
+                0 32px 80px -16px rgba(0, 0, 0, 0.7);
+        }
+
+        .showcase-mini {
+            border-radius: 20px;
+            max-width: 160px;
+            width: 100%;
+            box-shadow:
+                0 0 0 1px rgba(161, 161, 170, 0.12),
+                0 4px 16px rgba(0, 0, 0, 0.3),
+                0 32px 80px -16px rgba(0, 0, 0, 0.7);
+        }
+
+        /* ---- FEATURES ---- */
+        .features {
+            padding: 120px 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .features-header h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+        }
+
+        .features-header p {
+            font-size: 16px;
+            color: var(--silver-dim);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            padding: 36px 32px;
+            transition: background 0.3s;
+        }
+
+        .feature-card:hover {
+            background: var(--surface-2);
+        }
+
+        .feature-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: rgba(161, 161, 170, 0.08);
+            border: 1px solid rgba(161, 161, 170, 0.06);
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: var(--silver-bright);
+        }
+
+        .feature-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--silver-bright);
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--silver-dim);
+        }
+
+        /* ---- MODES ---- */
+        .modes {
+            padding: 80px 40px 120px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .modes-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .modes-header h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+        }
+
+        .modes-header p {
+            font-size: 16px;
+            color: var(--silver-dim);
+        }
+
+        .modes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .mode-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 24px;
+            background: var(--surface);
+            transition: background 0.2s;
+        }
+
+        .mode-row:hover {
+            background: var(--surface-2);
+        }
+
+        .mode-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--silver-bright);
+            min-width: 120px;
+        }
+
+        .mode-desc {
+            font-size: 13px;
+            color: var(--silver-dim);
+            flex: 1;
+        }
+
+        .mode-tag {
+            font-size: 11px;
+            font-family: var(--mono);
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(161, 161, 170, 0.08);
+            color: var(--silver-dim);
+            white-space: nowrap;
+        }
+
+        /* ---- HOTKEY ---- */
+        .hotkey-section {
+            padding: 80px 40px;
+            text-align: center;
+        }
+
+        .hotkey-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .key {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 36px;
+            padding: 0 12px;
+            font-family: var(--mono);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--silver-bright);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 2px 0 var(--border);
+        }
+
+        .key-plus {
+            color: var(--silver-dim);
+            font-size: 14px;
+        }
+
+        .hotkey-text {
+            font-size: 15px;
+            color: var(--silver-dim);
+            line-height: 1.6;
+        }
+
+        /* ---- PROVIDERS ---- */
+        .providers {
+            padding: 80px 40px;
+            text-align: center;
+        }
+
+        .providers h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+        }
+
+        .providers p {
+            font-size: 16px;
+            color: var(--silver-dim);
+            margin-bottom: 48px;
+        }
+
+        .provider-logos {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 48px;
+            flex-wrap: wrap;
+        }
+
+        .provider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .provider-circle {
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            font-size: 22px;
+            transition: border-color 0.2s;
+        }
+
+        .provider:hover .provider-circle {
+            border-color: var(--silver-dim);
+        }
+
+        .provider-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--silver-dim);
+        }
+
+        /* ---- FOOTER ---- */
+        footer {
+            padding: 60px 40px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .footer-brand img {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+        }
+
+        .footer-brand span {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--silver-bright);
+        }
+
+        footer p {
+            font-size: 12px;
+            color: var(--silver-dim);
+        }
+
+        footer a {
+            color: var(--silver);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--white);
+        }
+
+        /* ---- ANIMATIONS ---- */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.2, 0, 0, 1), transform 0.8s cubic-bezier(0.2, 0, 0, 1);
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .stagger-1 { transition-delay: 0.05s; }
+        .stagger-2 { transition-delay: 0.1s; }
+        .stagger-3 { transition-delay: 0.15s; }
+        .stagger-4 { transition-delay: 0.2s; }
+        .stagger-5 { transition-delay: 0.25s; }
+        .stagger-6 { transition-delay: 0.3s; }
+
+        /* ---- RESPONSIVE ---- */
+        @media (max-width: 768px) {
+            nav { padding: 16px 20px; }
+            .nav-links { display: none; }
+            .hero { padding: 100px 20px 60px; }
+            .hero h1 { font-size: 40px; letter-spacing: -1.5px; }
+            .hero-sub { font-size: 16px; }
+            .showcase { padding: 20px 20px 80px; }
+            .showcase-windows { flex-direction: column; gap: 24px; }
+            .features { padding: 80px 20px; }
+            .features-grid { grid-template-columns: 1fr; }
+            .modes { padding: 40px 20px 80px; }
+            .providers { padding: 60px 20px; }
+            .provider-logos { gap: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a class="nav-brand" href="#">
+            <img src="assets/icon.png" alt="Yapper">
+            <span>Yapper</span>
+        </a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#modes">Modes</a>
+            <a href="https://github.com/yapper/yapper">GitHub</a>
+            <a href="#" class="btn-download">
+                <i class="ph-duotone ph-download-simple" style="font-size:16px"></i>
+                Download
+            </a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <img class="hero-icon fade-in" src="assets/icon.png" alt="Yapper icon">
+        <h1 class="fade-in stagger-1"><span class="gradient">Talk. It types.</span></h1>
+        <p class="hero-sub fade-in stagger-2">
+            AI dictation for macOS. Whisper runs locally, your voice never leaves your Mac. Optional AI cleanup via OpenAI, Anthropic, or Ollama.
+        </p>
+        <div class="hero-actions fade-in stagger-3">
+            <a href="#" class="btn-download">
+                <i class="ph-duotone ph-download-simple" style="font-size:16px"></i>
+                Download for macOS
+            </a>
+            <a href="https://github.com/yapper/yapper" class="btn-secondary">
+                <i class="ph-duotone ph-github-logo" style="font-size:16px"></i>
+                View source
+            </a>
+        </div>
+        <p class="hero-meta fade-in stagger-4">macOS 13+ &middot; Apple Silicon &amp; Intel &middot; Free &amp; Open Source</p>
+        <details class="install-note fade-in stagger-5">
+            <summary>First time? macOS may block the app</summary>
+            <p>Since Yapper isn't notarized with Apple, macOS may prevent it from opening. After downloading, open Terminal and run:</p>
+            <code>xattr -cr /Applications/Yapper.app</code>
+            <p>Or install directly via Terminal (no Gatekeeper):</p>
+            <code>curl -L https://github.com/yapper/yapper/releases/latest/download/Yapper-apple-silicon.dmg -o /tmp/Yapper.dmg && hdiutil attach /tmp/Yapper.dmg && cp -R "/Volumes/Yapper/Yapper.app" /Applications/ && hdiutil detach "/Volumes/Yapper" && rm /tmp/Yapper.dmg</code>
+        </details>
+    </section>
+
+    <!-- SHOWCASE -->
+    <section class="showcase">
+        <div class="showcase-tabs fade-in">
+            <button class="showcase-tab active" onclick="switchShowcase('classic')">Classic</button>
+            <button class="showcase-tab" onclick="switchShowcase('mini')">Mini</button>
+        </div>
+        <div class="showcase-stage fade-in stagger-1">
+            <div class="showcase-view visible" id="showcase-classic">
+                <img class="showcase-classic" src="assets/classic-ui.png" alt="Yapper classic recording window">
+            </div>
+            <div class="showcase-view hidden" id="showcase-mini">
+                <img class="showcase-mini" src="assets/mini-ui.png" alt="Yapper mini recording indicator">
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features" id="features">
+        <div class="features-header fade-in">
+            <h2>How it works</h2>
+            <p>Whisper handles transcription on your Mac. An LLM cleans it up if you want.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card fade-in stagger-1">
+                <div class="feature-icon"><i class="ph-duotone ph-shield-check"></i></div>
+                <h3>Nothing leaves your Mac</h3>
+                <p>Whisper transcribes locally. Your audio stays on disk. Cloud AI is opt-in, not the default.</p>
+            </div>
+            <div class="feature-card fade-in stagger-2">
+                <div class="feature-icon"><i class="ph-duotone ph-waveform"></i></div>
+                <h3>Whisper, locally</h3>
+                <p>Runs OpenAI's Whisper models right on your machine. Multiple sizes from tiny to large, pick what fits.</p>
+            </div>
+            <div class="feature-card fade-in stagger-3">
+                <div class="feature-icon"><i class="ph-duotone ph-brain"></i></div>
+                <h3>Optional AI rewrite</h3>
+                <p>Send the transcript through GPT, Claude, or a local Ollama model to clean up tone, grammar, formatting.</p>
+            </div>
+            <div class="feature-card fade-in stagger-4">
+                <div class="feature-icon"><i class="ph-duotone ph-clipboard-text"></i></div>
+                <h3>Reads the room</h3>
+                <p>Knows your clipboard, selected text, and what app you're in. The AI uses that context to write better.</p>
+            </div>
+            <div class="feature-card fade-in stagger-5">
+                <div class="feature-icon"><i class="ph-duotone ph-keyboard"></i></div>
+                <h3>One hotkey, any app</h3>
+                <p>Option+Space from anywhere. Talk, stop, text shows up at your cursor. That's the whole workflow.</p>
+            </div>
+            <div class="feature-card fade-in stagger-6">
+                <div class="feature-icon"><i class="ph-duotone ph-sliders-horizontal"></i></div>
+                <h3>Modes for everything</h3>
+                <p>Email tone, casual messages, meeting notes, code comments. Six built-in, build your own on top.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOTKEY -->
+    <section class="hotkey-section fade-in">
+        <div class="hotkey-display">
+            <span class="key">&#x2325;</span>
+            <span class="key-plus">+</span>
+            <span class="key">Space</span>
+        </div>
+        <p class="hotkey-text">From anywhere on your Mac. Talk, it types, you move on.</p>
+    </section>
+
+    <!-- MODES -->
+    <section class="modes" id="modes">
+        <div class="modes-header fade-in">
+            <h2>Say it differently every time</h2>
+            <p>Same hotkey, different output depending on what you need.</p>
+        </div>
+        <div class="modes-list fade-in">
+            <div class="mode-row">
+                <span class="mode-name">Voice to Text</span>
+                <span class="mode-desc">Straight transcription, no processing</span>
+                <span class="mode-tag">local</span>
+            </div>
+            <div class="mode-row">
+                <span class="mode-name">Email</span>
+                <span class="mode-desc">Turns rambling into a proper email</span>
+                <span class="mode-tag">AI</span>
+            </div>
+            <div class="mode-row">
+                <span class="mode-name">Message</span>
+                <span class="mode-desc">Keeps it casual, just cleans up the rough edges</span>
+                <span class="mode-tag">AI</span>
+            </div>
+            <div class="mode-row">
+                <span class="mode-name">Note</span>
+                <span class="mode-desc">Turns your stream of consciousness into bullet points</span>
+                <span class="mode-tag">AI</span>
+            </div>
+            <div class="mode-row">
+                <span class="mode-name">Meeting</span>
+                <span class="mode-desc">Pulls out action items, decisions, who said what</span>
+                <span class="mode-tag">AI</span>
+            </div>
+            <div class="mode-row">
+                <span class="mode-name">Super</span>
+                <span class="mode-desc">Looks at what app you're in and writes accordingly</span>
+                <span class="mode-tag">AI</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROVIDERS -->
+    <section class="providers fade-in">
+        <h2>Works with what you've got</h2>
+        <p>Plug in an API key or run a model on your own hardware.</p>
+        <div class="provider-logos">
+            <div class="provider">
+                <div class="provider-circle"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg></div>
+                <span class="provider-name">OpenAI</span>
+            </div>
+            <div class="provider">
+                <div class="provider-circle"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg></div>
+                <span class="provider-name">Anthropic</span>
+            </div>
+            <div class="provider">
+                <div class="provider-circle"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M16.361 10.26a.894.894 0 0 0-.558.47l-.072.148.001.207c0 .193.004.217.059.353.076.193.152.312.291.448.24.238.51.3.872.205a.86.86 0 0 0 .517-.436.752.752 0 0 0 .08-.498c-.064-.453-.33-.782-.724-.897a1.06 1.06 0 0 0-.466 0zm-9.203.005c-.305.096-.533.32-.65.639a1.187 1.187 0 0 0-.06.52c.057.309.31.59.598.667.362.095.632.033.872-.205.14-.136.215-.255.291-.448.055-.136.059-.16.059-.353l.001-.207-.072-.148a.894.894 0 0 0-.565-.472 1.02 1.02 0 0 0-.474.007Zm4.184 2c-.131.071-.223.25-.195.383.031.143.157.288.353.407.105.063.112.072.117.136.004.038-.01.146-.029.243-.02.094-.036.194-.036.222.002.074.07.195.143.253.064.052.076.054.255.059.164.005.198.001.264-.03.169-.082.212-.234.15-.525-.052-.243-.042-.28.087-.355.137-.08.281-.219.324-.314a.365.365 0 0 0-.175-.48.394.394 0 0 0-.181-.033c-.126 0-.207.03-.355.124l-.085.053-.053-.032c-.219-.13-.259-.145-.391-.143a.396.396 0 0 0-.193.032zm.39-2.195c-.373.036-.475.05-.654.086-.291.06-.68.195-.951.328-.94.46-1.589 1.226-1.787 2.114-.04.176-.045.234-.045.53 0 .294.005.357.043.524.264 1.16 1.332 2.017 2.714 2.173.3.033 1.596.033 1.896 0 1.11-.125 2.064-.727 2.493-1.571.114-.226.169-.372.22-.602.039-.167.044-.23.044-.523 0-.297-.005-.355-.045-.531-.288-1.29-1.539-2.304-3.072-2.497a6.873 6.873 0 0 0-.855-.031zm.645.937a3.283 3.283 0 0 1 1.44.514c.223.148.537.458.671.662.166.251.26.508.303.82.02.143.01.251-.043.482-.08.345-.332.705-.672.957a3.115 3.115 0 0 1-.689.348c-.382.122-.632.144-1.525.138-.582-.006-.686-.01-.853-.042-.57-.107-1.022-.334-1.35-.68-.264-.28-.385-.535-.45-.946-.03-.192.025-.509.137-.776.136-.326.488-.73.836-.963.403-.269.934-.46 1.422-.512.187-.02.586-.02.773-.002zm-5.503-11a1.653 1.653 0 0 0-.683.298C5.617.74 5.173 1.666 4.985 2.819c-.07.436-.119 1.04-.119 1.503 0 .544.064 1.24.155 1.721.02.107.031.202.023.208a8.12 8.12 0 0 1-.187.152 5.324 5.324 0 0 0-.949 1.02 5.49 5.49 0 0 0-.94 2.339 6.625 6.625 0 0 0-.023 1.357c.091.78.325 1.438.727 2.04l.13.195-.037.064c-.269.452-.498 1.105-.605 1.732-.084.496-.095.629-.095 1.294 0 .67.009.803.088 1.266.095.555.288 1.143.503 1.534.071.128.243.393.264.407.007.003-.014.067-.046.141a7.405 7.405 0 0 0-.548 1.873c-.062.417-.071.552-.071.991 0 .56.031.832.148 1.279L3.42 24h1.478l-.05-.091c-.297-.552-.325-1.575-.068-2.597.117-.472.25-.819.498-1.296l.148-.29v-.177c0-.165-.003-.184-.057-.293a.915.915 0 0 0-.194-.25 1.74 1.74 0 0 1-.385-.543c-.424-.92-.506-2.286-.208-3.451.124-.486.329-.918.544-1.154a.787.787 0 0 0 .223-.531c0-.195-.07-.355-.224-.522a3.136 3.136 0 0 1-.817-1.729c-.14-.96.114-2.005.69-2.834.563-.814 1.353-1.336 2.237-1.475.199-.033.57-.028.776.01.226.04.367.028.512-.041.179-.085.268-.19.374-.431.093-.215.165-.333.36-.576.234-.29.46-.489.822-.729.413-.27.884-.467 1.352-.561.17-.035.25-.04.569-.04.319 0 .398.005.569.04a4.07 4.07 0 0 1 1.914.997c.117.109.398.457.488.602.034.057.095.177.132.267.105.241.195.346.374.43.14.068.286.082.503.045.343-.058.607-.053.943.016 1.144.23 2.14 1.173 2.581 2.437.385 1.108.276 2.267-.296 3.153-.097.15-.193.27-.333.419-.301.322-.301.722-.001 1.053.493.539.801 1.866.708 3.036-.062.772-.26 1.463-.533 1.854a2.096 2.096 0 0 1-.224.258.916.916 0 0 0-.194.25c-.054.109-.057.128-.057.293v.178l.148.29c.248.476.38.823.498 1.295.253 1.008.231 2.01-.059 2.581a.845.845 0 0 0-.044.098c0 .006.329.009.732.009h.73l.02-.074.036-.134c.019-.076.057-.3.088-.516.029-.217.029-1.016 0-1.258-.11-.875-.295-1.57-.597-2.226-.032-.074-.053-.138-.046-.141.008-.005.057-.074.108-.152.376-.569.607-1.284.724-2.228.031-.26.031-1.378 0-1.628-.083-.645-.182-1.082-.348-1.525a6.083 6.083 0 0 0-.329-.7l-.038-.064.131-.194c.402-.604.636-1.262.727-2.04a6.625 6.625 0 0 0-.024-1.358 5.512 5.512 0 0 0-.939-2.339 5.325 5.325 0 0 0-.95-1.02 8.097 8.097 0 0 1-.186-.152.692.692 0 0 1 .023-.208c.208-1.087.201-2.443-.017-3.503-.19-.924-.535-1.658-.98-2.082-.354-.338-.716-.482-1.15-.455-.996.059-1.8 1.205-2.116 3.01a6.805 6.805 0 0 0-.097.726c0 .036-.007.066-.015.066a.96.96 0 0 1-.149-.078A4.857 4.857 0 0 0 12 3.03c-.832 0-1.687.243-2.456.698a.958.958 0 0 1-.148.078c-.008 0-.015-.03-.015-.066a6.71 6.71 0 0 0-.097-.725C8.997 1.392 8.337.319 7.46.048a2.096 2.096 0 0 0-.585-.041Zm.293 1.402c.248.197.523.759.682 1.388.03.113.06.244.069.292.007.047.026.152.041.233.067.365.098.76.102 1.24l.002.475-.12.175-.118.178h-.278c-.324 0-.646.041-.954.124l-.238.06c-.033.007-.038-.003-.057-.144a8.438 8.438 0 0 1 .016-2.323c.124-.788.413-1.501.696-1.711.067-.05.079-.049.157.013zm9.825-.012c.17.126.358.46.498.888.28.854.36 2.028.212 3.145-.019.14-.024.151-.057.144l-.238-.06a3.693 3.693 0 0 0-.954-.124h-.278l-.119-.178-.119-.175.002-.474c.004-.669.066-1.19.214-1.772.157-.623.434-1.185.68-1.382.078-.062.09-.063.159-.012z"/></svg></div>
+                <span class="provider-name">Ollama</span>
+            </div>
+            <div class="provider">
+                <div class="provider-circle"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"/><path d="M19 10a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7.001 7.001 0 0 0 6 6.93V20H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.07A7.001 7.001 0 0 0 19 10Z"/></svg></div>
+                <span class="provider-name">Whisper</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-brand">
+            <img src="assets/icon.png" alt="Yapper">
+            <span>Yapper</span>
+        </div>
+        <p>Created by Ahmed Elhanafy &middot; Open source &middot; MIT License &middot; <a href="https://github.com/yapper/yapper">GitHub</a></p>
+    </footer>
+
+    <script>
+        // Scroll-triggered fade-in
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        function switchShowcase(view) {
+            document.querySelectorAll('.showcase-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.showcase-view').forEach(v => {
+                v.classList.remove('visible');
+                v.classList.add('hidden');
+            });
+
+            event.target.classList.add('active');
+            const el = document.getElementById('showcase-' + view);
+            el.classList.remove('hidden');
+            el.classList.add('visible');
+        }
+    </script>
+
+</body>
+</html>
