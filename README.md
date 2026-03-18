@@ -4,58 +4,102 @@
   <h1 align="center">Yapper</h1>
 </p>
 
-Dictation app for macOS. Talk, and it types. Runs Whisper locally so nothing leaves your machine unless you want AI cleanup via OpenAI or Anthropic.
+Dictation app for macOS. Talk, and it types. Whisper runs locally on your Mac. If you want an LLM to clean up what you said, plug in OpenAI, Anthropic, or run Ollama on your own hardware.
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-13.0+-blue" alt="macOS 13.0+">
   <img src="https://img.shields.io/badge/Swift-5.9+-orange" alt="Swift 5.9+">
-  <img src="https://img.shields.io/badge/Beta-yellow" alt="Beta">
+  <img src="https://img.shields.io/badge/MIT-License-green" alt="MIT License">
+</p>
+
+<p align="center">
+  <img src="website/assets/classic-ui.png" width="420" alt="Yapper recording window">
+  &nbsp;&nbsp;
+  <img src="website/assets/mini-ui.png" width="100" alt="Yapper mini mode">
 </p>
 
 ---
 
-## What it does
+## How it works
 
-You press a hotkey, say something, and the text shows up wherever your cursor is. Six built-in modes handle different situations: plain transcription, email tone, casual messages, structured notes, meeting capture, and a "super" mode that sends everything through cloud AI. You can also build your own modes.
+Press a hotkey, talk, let go. Text shows up wherever your cursor is.
 
-The AI modes pull in context from your clipboard, selected text, and whatever app you're in, so they have some idea what you're working on.
+Whisper handles the transcription right on your machine (defaults to the large-v3-turbo model). If you want the output cleaned up, polished, or reformatted, an LLM does that as a second pass. You pick which one.
+
+There are seven built-in modes, or make your own:
+
+| Mode | What it does |
+|------|-------------|
+| Voice to Text | Raw transcription, nothing added or removed |
+| Email | Turns your rambling into something you'd actually send |
+| Message | Casual cleanup, just the rough edges |
+| Note | Bullet points from a stream of consciousness |
+| Meeting | Pulls out action items, decisions, who said what |
+| Smart | Looks at what app you're in and writes accordingly |
+
+Email, Message, Note, Meeting, and Smart send the transcript through an LLM (OpenAI, Anthropic, or Ollama). Voice to Text stays entirely local.
+
+The AI modes also read your clipboard, selected text, and active app for context. So if you're in a code editor, it formats differently than if you're in Mail.
 
 ---
 
-## Get running
+## Get it running
 
-You need macOS 13+ and Xcode Command Line Tools (`xcode-select --install`).
+macOS 13+ and Xcode Command Line Tools (`xcode-select --install`).
 
 ```bash
-./scripts/setup-whisper.sh   # builds whisper.cpp, downloads base model (~150MB)
+./scripts/setup-whisper.sh   # builds whisper.cpp, downloads the large-v3-turbo model (~1.5GB)
 swift build
 .build/debug/Yapper
 ```
 
-macOS will ask for microphone and accessibility permissions. Say yes to both.
+macOS will ask for microphone and accessibility permissions. Grant both.
 
-Try it: click the menubar icon, press Option+Space, say something, press Option+Space again. Text should appear at your cursor.
+Left-click the menubar waveform icon to start recording (right-click for the menu). Or press Option+Space from anywhere. Talk, then press it again. Text lands at your cursor.
 
-For a release build that produces a signed .app bundle:
+For a release .app bundle:
 
 ```bash
-./build.sh   # output goes to dist/Yapper.app
+./build.sh                   # builds + signs -> dist/Yapper.app
+YAPPER_DIST=1 ./build.sh     # ad-hoc signed for distribution
+```
+
+Intel build:
+
+```bash
+./build-intel.sh             # cross-compiles whisper.cpp for x86_64
+```
+
+DMG installer:
+
+```bash
+./create-dmg.sh              # creates dist/Yapper-0.1.0-apple-silicon.dmg
 ```
 
 ---
 
-## Modes
+## AI providers
 
-| Mode | What it does |
-|------|-------------|
-| Voice-to-Text | Straight transcription, no processing |
-| Email | Cleans up your words into professional tone |
-| Message | Keeps it casual |
-| Note | Adds structure |
-| Meeting | Detailed capture for conference notes |
-| Super | Sends transcription through cloud AI for heavier rewriting |
+You choose what processes your text. Or nothing at all.
 
-Email, Message, Note, Meeting, and Super need an API key (OpenAI or Anthropic). Add one in Settings > API Keys. Keys go into macOS Keychain.
+| Provider | Where it runs | Setup |
+|----------|--------------|-------|
+| None (Voice to Text mode) | Your Mac | Nothing needed |
+| OpenAI | Cloud | Add API key in Settings |
+| Anthropic | Cloud | Add API key in Settings |
+| Ollama | Your Mac | Install Ollama, pull a model |
+
+Settings detects if Ollama is running and shows your local models in a dropdown. The base URL is configurable if you're running it on another machine.
+
+API keys are stored in a local file at `~/Library/Application Support/Yapper/`.
+
+---
+
+## The cycle-to-record thing
+
+Hit the cycle modes hotkey. The recording window appears with the next mode name. Keep hitting it to flip through modes. Once you stop, recording kicks in after about a second and a half.
+
+You can also use the Fn (globe) key as a modifier in your hotkey combos.
 
 ---
 
@@ -63,77 +107,72 @@ Email, Message, Note, Meeting, and Super need an API key (OpenAI or Anthropic). 
 
 ```
 Sources/Yapper/
-├── YapperApp.swift              # entry point
+├── YapperApp.swift              # entry point, menubar setup
 ├── Core/
 │   ├── Audio/AudioEngine        # mic recording (AVFoundation)
-│   ├── ASR/WhisperService       # local transcription (whisper.cpp)
-│   ├── AI/AIProcessor           # cloud AI calls
-│   ├── Context/ContextCapture   # reads clipboard, selection, active app
+│   ├── ASR/WhisperService       # whisper.cpp transcription
+│   ├── AI/AIProcessor           # OpenAI, Anthropic API calls
+│   ├── AI/OllamaService         # local Ollama model discovery + chat
+│   ├── Context/ContextCapture   # clipboard, selection, active app
 │   ├── Output/TextInserter      # pastes text via Accessibility APIs
-│   ├── Storage/StorageManager   # settings + history as JSON, keys in Keychain
-│   ├── RecordingCoordinator     # coordinates record -> transcribe -> insert
-│   └── HotkeyManager           # global hotkeys (Carbon Events)
-├── Models/                      # Mode, Session, Settings structs
-├── Views/                       # SwiftUI UI
-└── Resources/                   # assets, Info.plist
+│   ├── Storage/StorageManager   # JSON settings, API keys, history
+│   ├── RecordingCoordinator     # record -> transcribe -> AI -> insert
+│   └── HotkeyManager           # global hotkeys + Fn key support
+├── Models/                      # Mode, Session, Settings
+├── Views/                       # SwiftUI (Settings, Recording, History)
+└── Resources/                   # icon assets, Info.plist
 ```
 
-Built with Swift Package Manager. Whisper.cpp is linked as a C library through the `Vendor/CWhisper` system library target.
+Swift Package Manager. Whisper.cpp linked as a C library through `Vendor/CWhisper`.
 
 ---
 
 ## Working on it
 
-Add a mode: edit `Sources/Yapper/Models/Mode.swift`, define a static `Mode`, add it to `allBuiltIn`.
+Add a mode: `Sources/Yapper/Models/Mode.swift`, define a static `Mode`, append to `allBuiltIn`.
 
-Change AI prompts: edit the `instructions` field on any mode.
+Change what the AI does with your text: edit the `instructions` field on any mode definition.
 
-Add an AI provider: add a case to `AIProvider` in `Core/AI/AIProcessor.swift` and write the API call.
+Add a new AI provider: new case in `AIProvider`, implement the API call in `AIProcessor.swift`.
 
-Change hotkeys: Settings > Shortcuts in the app, or edit defaults in `Settings.swift`.
+Hotkeys: Settings > Shortcuts in the app, or edit `Settings.swift` for defaults.
 
-Run tests with `swift test`. For manual testing, the short version: does it record, transcribe, and insert text into TextEdit? Do settings survive a restart? See [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) for the full list.
-
----
-
-## When things break
-
-| Problem | What to do |
-|---------|-----------|
-| Mic permission denied | System Settings > Privacy & Security > Microphone, toggle Yapper on |
-| Text won't paste | Same path but Accessibility instead of Microphone |
-| "Model not found" | Run `./scripts/setup-whisper.sh` or grab one from Settings > Advanced > Models |
-| Whisper linker errors at build time | Normal if you haven't run setup-whisper.sh yet. App falls back to mock transcription. |
-| API calls failing | Check your key in Settings > API Keys. Make sure you're online. |
-| Weird build cache errors | `swift package clean && swift build` |
+Tests: `swift test`. Quick manual check: record something, does it transcribe, does the text end up in TextEdit, do settings stick after a restart.
 
 ---
 
-## More docs
+## Troubleshooting
 
-- [Whisper integration guide](docs/WHISPER_INTEGRATION_GUIDE.md)
-- [Testing guide](docs/TESTING_GUIDE.md)
-- [Release checklist](docs/RELEASE_CHECKLIST.md)
-- [Branding](docs/BRANDING.md)
-- [Project summary](docs/PROJECT_SUMMARY.md)
-
----
-
-## Status
-
-The core works: recording, local transcription, AI processing, context capture, text insertion, modes, hotkeys, settings, history. All there.
-
-Next up is proper end-to-end testing and getting it into the App Store. Siri/Shortcuts and export/import are on the list after that.
+| Problem | Fix |
+|---------|-----|
+| Mic not working | System Settings > Privacy & Security > Microphone, enable Yapper |
+| Text not inserting | Same but Accessibility instead of Microphone |
+| Model not found | Run `./scripts/setup-whisper.sh` or download from Settings > Advanced |
+| Build cache weirdness | `swift package clean && swift build` |
+| AI not responding | Check your key in Settings > API Keys. Ollama running? |
+| AI taking forever | It'll bail after 15 seconds and paste whatever Whisper gave it |
 
 ---
 
 ## FAQ
 
-**Do I need internet?** Only for the AI-enhanced modes. Plain transcription runs entirely on your Mac.
+**Do I need internet?** No. Voice to Text is completely offline. The AI modes need a connection unless you're using Ollama locally.
 
-**Which Whisper model?** Base is a good default. Tiny if you want speed, Large if you care more about accuracy.
+**Which Whisper model?** Large-v3-turbo is the default and the sweet spot. Tiny if you're on an older machine. Large if you want maximum accuracy and don't mind waiting.
 
-**Works with every app?** Most of them. Password fields and some sandboxed apps block text insertion.
+**Works everywhere?** Most apps. Password fields and a few sandboxed apps won't let it paste. macOS security restriction, not a bug.
+
+**Why does macOS block the app?** We don't have an Apple Developer ID ($99/year). Run `xattr -cr /Applications/Yapper.app` after installing, or use the curl install method on the [website](https://ahmedlhanafy.github.io/yapper/).
+
+---
+
+## Docs
+
+- [Whisper integration](docs/WHISPER_INTEGRATION_GUIDE.md)
+- [Testing guide](docs/TESTING_GUIDE.md)
+- [Release checklist](docs/RELEASE_CHECKLIST.md)
+- [Project summary](docs/PROJECT_SUMMARY.md)
+- [Website](https://ahmedlhanafy.github.io/yapper/)
 
 ---
 
@@ -142,3 +181,8 @@ Next up is proper end-to-end testing and getting it into the App Store. Siri/Sho
 - [Whisper.cpp](https://github.com/ggerganov/whisper.cpp) by Georgi Gerganov
 - [OpenAI Whisper](https://openai.com/research/whisper)
 - Anthropic Claude
+- The Ollama project
+
+---
+
+MIT License. Created by [Ahmed Elhanafy](https://github.com/ahmedlhanafy).
