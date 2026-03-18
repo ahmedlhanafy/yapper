@@ -445,11 +445,13 @@ struct AudioSettingsView: View {
 struct APIKeysSettingsView: View {
     @State private var openaiKey = ""
     @State private var anthropicKey = ""
+    @State private var geminiKey = ""
     @ObservedObject private var ollama = OllamaService.shared
     @ObservedObject private var appState = AppState.shared
 
     private var hasOpenAIKey: Bool { StorageManager.shared.loadAPIKey(for: .openai) != nil }
     private var hasAnthropicKey: Bool { StorageManager.shared.loadAPIKey(for: .anthropic) != nil }
+    private var hasGeminiKey: Bool { StorageManager.shared.loadAPIKey(for: .gemini) != nil }
 
     var body: some View {
         ScrollView {
@@ -484,6 +486,15 @@ struct APIKeysSettingsView: View {
                             .foregroundColor(.red)
                         }
                     }
+
+                    Link(destination: URL(string: AIProvider.openai.apiKeyURL)!) {
+                        HStack(spacing: 4) {
+                            Text("Get API Key")
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 9))
+                        }
+                        .font(.system(size: 11))
+                    }
                 }
 
                 // Anthropic
@@ -515,6 +526,56 @@ struct APIKeysSettingsView: View {
                             .controlSize(.small)
                             .foregroundColor(.red)
                         }
+                    }
+
+                    Link(destination: URL(string: AIProvider.anthropic.apiKeyURL)!) {
+                        HStack(spacing: 4) {
+                            Text("Get API Key")
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 9))
+                        }
+                        .font(.system(size: 11))
+                    }
+                }
+
+                // Gemini
+                ProviderCard(
+                    name: "Gemini",
+                    icon: "diamond",
+                    color: .cyan,
+                    isConnected: hasGeminiKey,
+                    description: "Google Gemini models"
+                ) {
+                    HStack(spacing: 8) {
+                        SecureField("AIza...", text: $geminiKey)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 12, design: .monospaced))
+
+                        Button(hasGeminiKey ? "Update" : "Save") {
+                            StorageManager.shared.saveAPIKey(geminiKey, for: .gemini)
+                            geminiKey = ""
+                        }
+                        .disabled(geminiKey.isEmpty)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+
+                        if hasGeminiKey {
+                            Button("Remove") {
+                                StorageManager.shared.deleteAPIKey(for: .gemini)
+                                geminiKey = ""
+                            }
+                            .controlSize(.small)
+                            .foregroundColor(.red)
+                        }
+                    }
+
+                    Link(destination: URL(string: AIProvider.gemini.apiKeyURL)!) {
+                        HStack(spacing: 4) {
+                            Text("Get API Key")
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 9))
+                        }
+                        .font(.system(size: 11))
                     }
                 }
 
@@ -583,7 +644,7 @@ struct APIKeysSettingsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 10))
-                    Text("API keys are stored in the macOS Keychain.")
+                    Text("API keys are stored locally on your Mac.")
                         .font(.system(size: 11))
                 }
                 .foregroundColor(.secondary)

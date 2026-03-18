@@ -102,6 +102,8 @@ class AIProcessor {
             return try await callOpenAI(prompt: prompt, model: model)
         case .anthropic:
             return try await callAnthropic(prompt: prompt, model: model)
+        case .gemini:
+            return try await callGemini(prompt: prompt, model: model)
         case .ollama:
             return try await callOllama(prompt: prompt, model: model)
         }
@@ -203,6 +205,51 @@ class AIProcessor {
         }
 
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Gemini (OpenAI-compatible endpoint)
+
+    private func callGemini(prompt: String, model: String) async throws -> String {
+        guard let apiKey = StorageManager.shared.loadAPIKey(for: .gemini) else {
+            throw AIError.missingAPIKey(.gemini)
+        }
+
+        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "model": model,
+            "messages": [
+                ["role": "user", "content": prompt]
+            ]
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errorBody = String(data: data, encoding: .utf8) ?? "unknown"
+            print("❌ Gemini error \(httpResponse.statusCode): \(errorBody)")
+            throw AIError.apiError(statusCode: httpResponse.statusCode, data: data)
+        }
+
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        guard let choices = json?["choices"] as? [[String: Any]],
+              let message = choices.first?["message"] as? [String: Any],
+              let content = message["content"] as? String else {
+            throw AIError.invalidResponse
+        }
+
+        return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Ollama

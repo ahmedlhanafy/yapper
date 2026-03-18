@@ -193,7 +193,7 @@ class SettingsWindow: NSObject, NSToolbarDelegate {
         // Window
         let window = NSWindow(contentViewController: splitVC)
         window.title = ""
-        window.setContentSize(NSSize(width: 700, height: 500))
+        window.setContentSize(NSSize(width: 820, height: 540))
         window.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified

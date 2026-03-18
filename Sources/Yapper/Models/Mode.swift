@@ -117,12 +117,14 @@ struct AISettings: Codable, Equatable, Hashable {
 enum AIProvider: String, Codable, CaseIterable {
     case openai
     case anthropic
+    case gemini
     case ollama
 
     var displayName: String {
         switch self {
         case .openai: return "OpenAI"
         case .anthropic: return "Anthropic"
+        case .gemini: return "Gemini"
         case .ollama: return "Ollama"
         }
     }
@@ -131,6 +133,7 @@ enum AIProvider: String, Codable, CaseIterable {
         switch self {
         case .openai: return "gpt-4.1-mini"
         case .anthropic: return "claude-sonnet-4-6"
+        case .gemini: return "gemini-2.5-flash"
         case .ollama: return "llama3:latest"
         }
     }
@@ -161,6 +164,13 @@ enum AIProvider: String, Codable, CaseIterable {
                 ("claude-haiku-4-5", "Claude Haiku 4.5"),
                 ("claude-sonnet-4-5", "Claude Sonnet 4.5"),
             ]
+        case .gemini:
+            return [
+                ("gemini-2.5-flash", "Gemini 2.5 Flash"),
+                ("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite"),
+                ("gemini-2.5-pro", "Gemini 2.5 Pro"),
+                ("gemini-3.1-pro-preview", "Gemini 3.1 Pro (Preview)"),
+            ]
         case .ollama:
             return [] // populated dynamically
         }
@@ -168,8 +178,17 @@ enum AIProvider: String, Codable, CaseIterable {
 
     var requiresAPIKey: Bool {
         switch self {
-        case .openai, .anthropic: return true
+        case .openai, .anthropic, .gemini: return true
         case .ollama: return false
+        }
+    }
+
+    var apiKeyURL: String {
+        switch self {
+        case .openai: return "https://platform.openai.com/api-keys"
+        case .anthropic: return "https://console.anthropic.com/account/keys"
+        case .gemini: return "https://aistudio.google.com/app/apikey"
+        case .ollama: return ""
         }
     }
 
