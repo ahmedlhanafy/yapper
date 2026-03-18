@@ -120,9 +120,15 @@
         }
 
         .btn-download:hover {
+            color: var(--bg);
             background: var(--white);
             transform: translateY(-1px);
             box-shadow: 0 4px 20px rgba(161, 161, 170, 0.2);
+        }
+
+        .btn-download:visited,
+        .btn-download:active {
+            color: var(--bg);
         }
 
         /* ---- HERO ---- */
@@ -736,13 +742,6 @@
             </a>
         </div>
         <p class="hero-meta fade-in stagger-4">macOS 13+ &middot; Apple Silicon &amp; Intel &middot; Free &amp; Open Source</p>
-        <details class="install-note fade-in stagger-5">
-            <summary>First time? macOS may block the app</summary>
-            <p>Since Yapper isn't notarized with Apple, macOS may prevent it from opening. After downloading, open Terminal and run:</p>
-            <code>xattr -cr /Applications/Yapper.app</code>
-            <p>Or install directly via Terminal (no Gatekeeper):</p>
-            <code>curl -L https://github.com/ahmedlhanafy/yapper/releases/latest/download/Yapper-0.1.0-apple-silicon.dmg -o /tmp/Yapper.dmg && hdiutil attach /tmp/Yapper.dmg && cp -R "/Volumes/Yapper/Yapper.app" /Applications/ && hdiutil detach "/Volumes/Yapper" && rm /tmp/Yapper.dmg</code>
-        </details>
     </section>
 
     <!-- SHOWCASE -->
