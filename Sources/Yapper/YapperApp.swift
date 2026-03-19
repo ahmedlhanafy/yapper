@@ -42,8 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Apply saved appearance setting
         AppearanceManager.shared.applyAppearance()
 
-        // Check accessibility permissions first
-        checkAccessibilityPermissions()
+        // Accessibility permissions are requested on-demand when context capture is used
 
         // Delay setup to avoid CA commit warnings
         DispatchQueue.main.async { [weak self] in

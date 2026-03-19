@@ -371,9 +371,9 @@ extension Mode {
             """
         ),
         contextSettings: ContextSettings(
-            captureClipboard: true,
-            captureSelection: true,
-            captureAppContext: true
+            captureClipboard: false,
+            captureSelection: false,
+            captureAppContext: false
         ),
         outputBehavior: .insertAtCursor
     )

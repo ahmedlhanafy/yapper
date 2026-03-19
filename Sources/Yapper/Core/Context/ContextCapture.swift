@@ -16,6 +16,14 @@ class ContextCapture {
             context.clipboard = captureClipboard()
         }
 
+        // Selection and app context require accessibility permissions
+        let needsAccessibility = settings.captureSelection || settings.captureAppContext
+        if needsAccessibility && !hasAccessibilityPermissions() {
+            requestAccessibilityPermissions()
+            // Don't capture this time, permissions will be ready next time
+            return context
+        }
+
         if settings.captureSelection {
             context.selection = captureSelection()
         }
