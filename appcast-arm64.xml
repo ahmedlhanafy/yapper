@@ -7,6 +7,27 @@
     <language>en</language>
 
     <item>
+      <title>Version 0.3.0</title>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.3.0</h2>
+        <ul>
+          <li>Auto-update support via Sparkle</li>
+          <li>Check for Updates in menubar and Settings</li>
+        </ul>
+      ]]></description>
+      <pubDate>Wed, 19 Mar 2026 00:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/ahmedlhanafy/yapper/releases/download/v0.3.0/Yapper-0.3.0-apple-silicon.dmg"
+        sparkle:edSignature="miUkxfwPJLbV+5shx2MJt85RlITD6xN8hOHVVrc+u80KlZRLnpneCuvmgUKnqnX23HnxGrwBvJEng2TVpLUzCw=="
+        length="5674382"
+        type="application/octet-stream"
+      />
+    </item>
+
+    <item>
       <title>Version 0.2.1</title>
       <sparkle:version>2</sparkle:version>
       <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
