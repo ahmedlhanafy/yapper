@@ -59,8 +59,11 @@ class WhisperService {
             print("⬇️ Model not found locally, downloading...")
             await MainActor.run {
                 RecordingCoordinator.shared.state = .downloadingModel
+                RecordingCoordinator.shared.downloadProgress = 0
             }
-            try await downloadModel(model) { _ in }
+            try await downloadModel(model) { fraction in
+                RecordingCoordinator.shared.downloadProgress = fraction
+            }
         }
 
         // Load model using bridge
@@ -108,16 +111,38 @@ class WhisperService {
         let downloadURL = modelDownloadURL(for: model)
         print("⬇️ Downloading \(model.rawValue) from \(downloadURL)...")
 
-        // Use URLSession download task with observation
-        let (tempURL, response) = try await URLSession.shared.download(from: downloadURL)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw WhisperError.modelLoadFailed(NSError(domain: "WhisperService", code: code, userInfo: [NSLocalizedDescriptionKey: "Download failed with status \(code)"]))
+        // Use continuation + downloadTask so delegate progress callbacks fire
+        let tempURL: URL = try await withCheckedThrowingContinuation { continuation in
+            let delegate = DownloadProgressDelegate(
+                progress: progress,
+                completion: { url, response, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                        continuation.resume(throwing: WhisperError.modelLoadFailed(
+                            NSError(domain: "WhisperService", code: code,
+                                    userInfo: [NSLocalizedDescriptionKey: "Download failed with status \(code)"])
+                        ))
+                        return
+                    }
+                    guard let url = url else {
+                        continuation.resume(throwing: WhisperError.modelLoadFailed(
+                            NSError(domain: "WhisperService", code: 0,
+                                    userInfo: [NSLocalizedDescriptionKey: "No download URL"])
+                        ))
+                        return
+                    }
+                    continuation.resume(returning: url)
+                }
+            )
+            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            session.downloadTask(with: downloadURL).resume()
         }
 
         // Move to models directory
-        // Remove existing file if any
         try? FileManager.default.removeItem(at: destURL)
         try FileManager.default.moveItem(at: tempURL, to: destURL)
 
@@ -233,6 +258,38 @@ class WhisperService {
         "hi": "Hindi",
         // Add more as needed - Whisper supports 100+
     ]
+}
+
+// MARK: - Download Progress Delegate
+
+private class DownloadProgressDelegate: NSObject, URLSessionDownloadDelegate {
+    let progress: (Double) -> Void
+    let completion: (URL?, URLResponse?, Error?) -> Void
+    private var savedURL: URL?
+
+    init(progress: @escaping (Double) -> Void, completion: @escaping (URL?, URLResponse?, Error?) -> Void) {
+        self.progress = progress
+        self.completion = completion
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        guard totalBytesExpectedToWrite > 0 else { return }
+        let fraction = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        DispatchQueue.main.async {
+            self.progress(fraction)
+        }
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        // Move to a temp location before the system cleans up
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".bin")
+        try? FileManager.default.moveItem(at: location, to: tmp)
+        savedURL = tmp
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        completion(savedURL, task.response, error)
+    }
 }
 
 // MARK: - Types

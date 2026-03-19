@@ -10,6 +10,7 @@ class RecordingCoordinator: ObservableObject {
 
     @Published var state: ProcessingState = .idle
     @Published var currentSession: Session?
+    @Published var downloadProgress: Double = 0
 
     private var recordingStartTime: Date?
     private var audioURL: URL?

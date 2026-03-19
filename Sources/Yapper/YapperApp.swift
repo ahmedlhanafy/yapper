@@ -98,7 +98,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 print("🚀 Default model not found, downloading \(defaultModel.rawValue)...")
                 Task {
                     do {
-                        try await WhisperService.shared.downloadModel(defaultModel) { _ in }
+                        try await WhisperService.shared.downloadModel(defaultModel) { fraction in
+                            RecordingCoordinator.shared.downloadProgress = fraction
+                        }
                         print("✅ Default model downloaded")
                     } catch {
                         print("⚠️ Failed to download default model: \(error)")

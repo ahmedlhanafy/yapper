@@ -296,26 +296,43 @@ struct RecordingWindowContent: View {
 
     private var processingOverlay: some View {
         HStack(spacing: 12) {
-            Image(systemName: "brain")
-                .font(.system(size: 24))
-                .foregroundColor(goldLight)
-                .opacity(brainOpacity)
-                .shadow(color: goldLight.opacity(0.4), radius: 6)
-                .onAppear {
-                    withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                        brainOpacity = 1.0
+            if coordinator.state == .downloadingModel {
+                // Download progress ring
+                ZStack {
+                    Circle()
+                        .stroke(goldDark.opacity(0.2), lineWidth: 3)
+                    Circle()
+                        .trim(from: 0, to: coordinator.downloadProgress)
+                        .stroke(goldLight, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.linear(duration: 0.3), value: coordinator.downloadProgress)
+                    Text("\(Int(coordinator.downloadProgress * 100))%")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundColor(goldLight)
+                }
+                .frame(width: 32, height: 32)
+            } else {
+                Image(systemName: "brain")
+                    .font(.system(size: 24))
+                    .foregroundColor(goldLight)
+                    .opacity(brainOpacity)
+                    .shadow(color: goldLight.opacity(0.4), radius: 6)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                            brainOpacity = 1.0
+                        }
                     }
-                }
-                .onDisappear {
-                    brainOpacity = 0.3
-                }
+                    .onDisappear {
+                        brainOpacity = 0.3
+                    }
+            }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(coordinator.state == .downloadingModel ? "Downloading model..." : coordinator.state == .transcribing ? "Transcribing..." : "Thinking...")
+                Text(coordinator.state == .downloadingModel ? "Downloading dictation model..." : coordinator.state == .transcribing ? "Transcribing..." : "Thinking...")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(warmWhite)
 
-                Text(coordinator.state == .downloadingModel ? "First time setup, one moment" : coordinator.state == .transcribing ? "Converting speech to text" : "Processing with AI")
+                Text(coordinator.state == .downloadingModel ? "First time setup — speech-to-text engine" : coordinator.state == .transcribing ? "Converting speech to text" : "Processing with AI")
                     .font(.system(size: 11))
                     .foregroundColor(warmWhite.opacity(0.5))
             }

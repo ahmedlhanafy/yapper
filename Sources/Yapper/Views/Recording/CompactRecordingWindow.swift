@@ -61,14 +61,20 @@ struct CompactRecordingWindowContent: View {
                     .foregroundColor(.red)
             } else if isProcessing {
                 HStack(spacing: 6) {
-                    Image(systemName: "brain")
-                        .font(.system(size: 12))
-                        .foregroundColor(silverLight)
-                        .opacity(brainOpacity)
-                        .shadow(color: silverLight.opacity(0.3), radius: 3)
-                    Text(coordinator.state == .downloadingModel ? "DL" : coordinator.state == .transcribing ? "..." : "AI")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(silverLight.opacity(0.7))
+                    if coordinator.state == .downloadingModel {
+                        Text("\(Int(coordinator.downloadProgress * 100))%")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundColor(silverLight)
+                    } else {
+                        Image(systemName: "brain")
+                            .font(.system(size: 12))
+                            .foregroundColor(silverLight)
+                            .opacity(brainOpacity)
+                            .shadow(color: silverLight.opacity(0.3), radius: 3)
+                        Text(coordinator.state == .transcribing ? "..." : "AI")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(silverLight.opacity(0.7))
+                    }
                 }
             } else {
                 HStack(spacing: 8) {
