@@ -40,6 +40,7 @@ DYLIBS=(
     "$WHISPER_BUILD/ggml/src/libggml.0.dylib"
     "$WHISPER_BUILD/ggml/src/libggml-base.0.dylib"
     "$WHISPER_BUILD/ggml/src/libggml-cpu.0.dylib"
+    "$WHISPER_BUILD/ggml/src/ggml-blas/libggml-blas.0.dylib"
     "$WHISPER_BUILD/ggml/src/ggml-metal/libggml-metal.0.dylib"
 )
 
@@ -82,34 +83,39 @@ install_name_tool -change "@rpath/libggml.0.dylib" "@executable_path/../Framewor
 install_name_tool -change "@rpath/libggml-base.0.dylib" "@executable_path/../Frameworks/libggml-base.0.dylib" "$EXECUTABLE"
 install_name_tool -change "@rpath/libggml-cpu.0.dylib" "@executable_path/../Frameworks/libggml-cpu.0.dylib" "$EXECUTABLE"
 install_name_tool -change "@rpath/libggml-metal.0.dylib" "@executable_path/../Frameworks/libggml-metal.0.dylib" "$EXECUTABLE"
+install_name_tool -change "@rpath/libggml-blas.0.dylib" "@executable_path/../Frameworks/libggml-blas.0.dylib" "$EXECUTABLE"
 
-# Step 9: Fix inter-library dependencies
+# Step 9: Fix ALL inter-library @rpath references
 echo "🔧 Fixing inter-library dependencies..."
 FRAMEWORKS_DIR="$APP_BUNDLE/Contents/Frameworks"
 
-# Fix libwhisper dependencies
-if [ -f "$FRAMEWORKS_DIR/libwhisper.1.dylib" ]; then
-    install_name_tool -change "@rpath/libggml.0.dylib" "@executable_path/../Frameworks/libggml.0.dylib" "$FRAMEWORKS_DIR/libwhisper.1.dylib"
-    install_name_tool -change "@rpath/libggml-base.0.dylib" "@executable_path/../Frameworks/libggml-base.0.dylib" "$FRAMEWORKS_DIR/libwhisper.1.dylib"
-    install_name_tool -change "@rpath/libggml-cpu.0.dylib" "@executable_path/../Frameworks/libggml-cpu.0.dylib" "$FRAMEWORKS_DIR/libwhisper.1.dylib"
-    install_name_tool -change "@rpath/libggml-metal.0.dylib" "@executable_path/../Frameworks/libggml-metal.0.dylib" "$FRAMEWORKS_DIR/libwhisper.1.dylib"
-    install_name_tool -id "@executable_path/../Frameworks/libwhisper.1.dylib" "$FRAMEWORKS_DIR/libwhisper.1.dylib"
-fi
+# Fix every @rpath reference in every bundled dylib
+KNOWN_LIBS=("libwhisper.1.dylib" "libggml.0.dylib" "libggml-base.0.dylib" "libggml-cpu.0.dylib" "libggml-blas.0.dylib" "libggml-metal.0.dylib")
 
-# Fix libggml dependencies
-if [ -f "$FRAMEWORKS_DIR/libggml.0.dylib" ]; then
-    install_name_tool -change "@rpath/libggml-base.0.dylib" "@executable_path/../Frameworks/libggml-base.0.dylib" "$FRAMEWORKS_DIR/libggml.0.dylib"
-    install_name_tool -change "@rpath/libggml-cpu.0.dylib" "@executable_path/../Frameworks/libggml-cpu.0.dylib" "$FRAMEWORKS_DIR/libggml.0.dylib"
-    install_name_tool -change "@rpath/libggml-metal.0.dylib" "@executable_path/../Frameworks/libggml-metal.0.dylib" "$FRAMEWORKS_DIR/libggml.0.dylib"
-    install_name_tool -id "@executable_path/../Frameworks/libggml.0.dylib" "$FRAMEWORKS_DIR/libggml.0.dylib"
-fi
+for dylib in "$FRAMEWORKS_DIR"/*.dylib; do
+    [ -f "$dylib" ] || continue
+    dylib_name=$(basename "$dylib")
 
-# Fix libggml-base
-if [ -f "$FRAMEWORKS_DIR/libggml-base.0.dylib" ]; then
-    install_name_tool -id "@executable_path/../Frameworks/libggml-base.0.dylib" "$FRAMEWORKS_DIR/libggml-base.0.dylib"
-fi
+    # Set install name
+    install_name_tool -id "@executable_path/../Frameworks/$dylib_name" "$dylib" 2>/dev/null || true
 
-# Fix libggml-cpu dependencies
+    # Fix all @rpath references to point to Frameworks
+    for lib in "${KNOWN_LIBS[@]}"; do
+        install_name_tool -change "@rpath/$lib" "@executable_path/../Frameworks/$lib" "$dylib" 2>/dev/null || true
+    done
+
+    # Also strip any hardcoded local rpaths from dylibs
+    otool -l "$dylib" 2>/dev/null | grep -A2 LC_RPATH | grep "path " | sed 's/.*path \(.*\) (offset.*/\1/' | while read -r rpath; do
+        case "$rpath" in
+            @*|/usr/lib/*|/System/*) ;;
+            *) install_name_tool -delete_rpath "$rpath" "$dylib" 2>/dev/null || true ;;
+        esac
+    done
+done
+
+echo "  Fixed $(ls "$FRAMEWORKS_DIR"/*.dylib | wc -l | tr -d ' ') libraries"
+
+# Legacy individual fixes (keep for safety)
 if [ -f "$FRAMEWORKS_DIR/libggml-cpu.0.dylib" ]; then
     install_name_tool -change "@rpath/libggml-base.0.dylib" "@executable_path/../Frameworks/libggml-base.0.dylib" "$FRAMEWORKS_DIR/libggml-cpu.0.dylib"
     install_name_tool -id "@executable_path/../Frameworks/libggml-cpu.0.dylib" "$FRAMEWORKS_DIR/libggml-cpu.0.dylib"
