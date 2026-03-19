@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Yapper Updates (Apple Silicon)</title>
+    <link>https://ahmedlhanafy.github.io/yapper/appcast-arm64.xml</link>
+    <description>Most recent updates to Yapper for Apple Silicon</description>
+    <language>en</language>
+
+    <item>
+      <title>Version 0.2.1</title>
+      <sparkle:version>2</sparkle:version>
+      <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.2.1</h2>
+        <ul>
+          <li>Auto-update support</li>
+          <li>Bug fixes and improvements</li>
+        </ul>
+      ]]></description>
+      <pubDate>Tue, 18 Mar 2026 00:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/ahmedlhanafy/yapper/releases/download/v0.2.1/Yapper-0.2.1-apple-silicon.dmg"
+        sparkle:edSignature="EC480Q6NK0LO6/vEsC2qFrktBGboSJkcPf8jHP7zI/qcXWbpRciLPx2s5Dmx1+Hm9cdPNrMHgdASSKGFI96lBw=="
+        length="5674256"
+        type="application/octet-stream"
+      />
+    </item>
+  </channel>
+</rss>
