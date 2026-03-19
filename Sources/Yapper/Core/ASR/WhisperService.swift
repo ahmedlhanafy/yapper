@@ -93,28 +93,28 @@ class WhisperService {
     // MARK: - Model Downloads
 
     func downloadModel(_ model: WhisperModel, progress: @escaping (Double) -> Void) async throws {
-        let modelURL = modelURL(for: model)
+        let destURL = modelURL(for: model)
 
-        // Check if already exists
-        if FileManager.default.fileExists(atPath: modelURL.path) {
+        if FileManager.default.fileExists(atPath: destURL.path) {
             print("ℹ️ Model already downloaded: \(model.rawValue)")
             return
         }
 
-        print("⬇️ Downloading \(model.rawValue) model...")
-
-        // TODO: Download from Hugging Face or OpenAI
-        // For now, simulate download
         let downloadURL = modelDownloadURL(for: model)
+        print("⬇️ Downloading \(model.rawValue) from \(downloadURL)...")
 
-        let (tempURL, _) = try await URLSession.shared.download(from: downloadURL) { bytesWritten, totalBytes, _ in
-            if totalBytes > 0 {
-                progress(Double(bytesWritten) / Double(totalBytes))
-            }
+        // Use URLSession download task with observation
+        let (tempURL, response) = try await URLSession.shared.download(from: downloadURL)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw WhisperError.modelLoadFailed(NSError(domain: "WhisperService", code: code, userInfo: [NSLocalizedDescriptionKey: "Download failed with status \(code)"]))
         }
 
         // Move to models directory
-        try FileManager.default.moveItem(at: tempURL, to: modelURL)
+        // Remove existing file if any
+        try? FileManager.default.removeItem(at: destURL)
+        try FileManager.default.moveItem(at: tempURL, to: destURL)
 
         print("✓ Model downloaded: \(model.rawValue)")
     }
@@ -147,9 +147,16 @@ class WhisperService {
     }
 
     private func modelDownloadURL(for model: WhisperModel) -> URL {
-        // Hugging Face repo: https://huggingface.co/ggerganov/whisper.cpp
         let baseURL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
-        return URL(string: "\(baseURL)/ggml-\(model.rawValue).bin")!
+        // The "large" model is "large-v3" on HuggingFace
+        let filename: String
+        switch model {
+        case .large:
+            filename = "ggml-large-v3.bin"
+        default:
+            filename = "ggml-\(model.rawValue).bin"
+        }
+        return URL(string: "\(baseURL)/\(filename)")!
     }
 
     private func performTranscription(audioURL: URL, language: String) async throws -> TranscriptionResult {
@@ -267,37 +274,3 @@ enum WhisperError: LocalizedError {
     }
 }
 
-// MARK: - URLSession Extension
-
-extension URLSession {
-    func download(
-        from url: URL,
-        progressHandler: @escaping (Int64, Int64, Error?) -> Void
-    ) async throws -> (URL, URLResponse) {
-        let (asyncBytes, response) = try await bytes(from: url)
-
-        let expectedLength = response.expectedContentLength
-        var receivedLength: Int64 = 0
-
-        // Create temp file
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-
-        let fileHandle = try FileHandle(forWritingTo: tempURL)
-        defer { try? fileHandle.close() }
-
-        // Write bytes
-        for try await byte in asyncBytes {
-            let data = Data([byte])
-            try fileHandle.write(contentsOf: data)
-            receivedLength += 1
-
-            if receivedLength % 1024 == 0 { // Update every KB
-                progressHandler(receivedLength, expectedLength, nil)
-            }
-        }
-
-        progressHandler(receivedLength, expectedLength, nil)
-
-        return (tempURL, response)
-    }
-}

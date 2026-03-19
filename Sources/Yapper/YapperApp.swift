@@ -89,6 +89,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             //     MiniRecordingWindowController.shared.show()
             // }
 
+            // Auto-download default Whisper model if not present
+            let defaultModel = AppState.shared.currentMode.voiceSettings.model
+            if !WhisperService.shared.isModelDownloaded(defaultModel) {
+                print("🚀 Default model not found, downloading \(defaultModel.rawValue)...")
+                Task {
+                    do {
+                        try await WhisperService.shared.downloadModel(defaultModel) { _ in }
+                        print("✅ Default model downloaded")
+                    } catch {
+                        print("⚠️ Failed to download default model: \(error)")
+                    }
+                }
+            }
+
             print("✅✅✅ Yapper launched successfully ✅✅✅")
             print("✅ Press Option+Space to record")
             print("✅ Look for the waveform icon in your menubar (top-right corner)")

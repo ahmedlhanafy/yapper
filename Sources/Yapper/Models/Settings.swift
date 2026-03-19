@@ -78,7 +78,7 @@ struct Settings: Codable {
 
         self.inputDevice = nil
         self.enableNormalization = true
-        self.recordOnMenubarClick = true
+        self.recordOnMenubarClick = false
 
         self.modes = Mode.allBuiltIn
         self.defaultModeKey = Mode.voiceToText.key
