@@ -130,6 +130,19 @@ struct GeneralSettingsView: View {
                 .help("Show Yapper icon in the Dock. When hidden, use the menubar icon.")
             }
 
+            Section("Updates") {
+                if let updater = appState.updaterController {
+                    Toggle("Automatically check for updates", isOn: Binding(
+                        get: { updater.automaticallyChecksForUpdates },
+                        set: { updater.automaticallyChecksForUpdates = $0 }
+                    ))
+
+                    Button("Check for Updates Now...") {
+                        updater.checkForUpdates()
+                    }
+                }
+            }
+
             Section("Interface") {
                 Picker("Appearance", selection: Binding(
                     get: { appState.settings.appearanceMode },

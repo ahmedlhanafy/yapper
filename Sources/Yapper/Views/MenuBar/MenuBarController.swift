@@ -5,9 +5,11 @@ import SwiftUI
 class MenuBarController {
     private weak var statusItem: NSStatusItem?
     private var menu: NSMenu?
+    private let updaterController: UpdaterController
 
-    init(statusItem: NSStatusItem?) {
+    init(statusItem: NSStatusItem?, updaterController: UpdaterController) {
         self.statusItem = statusItem
+        self.updaterController = updaterController
         buildMenu()
     }
 
@@ -74,6 +76,16 @@ class MenuBarController {
         settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settingsItem)
 
+        // Check for Updates
+        let updateItem = NSMenuItem(
+            title: "Check for Updates...",
+            action: #selector(checkForUpdates),
+            keyEquivalent: ""
+        )
+        updateItem.target = self
+        updateItem.image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: nil)
+        menu.addItem(updateItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // Quit
@@ -130,6 +142,10 @@ class MenuBarController {
         AppState.shared.saveSettings()
 
         print("✓ Selected mode: \(mode.name)")
+    }
+
+    @objc private func checkForUpdates() {
+        updaterController.checkForUpdates()
     }
 
     @objc private func openHistory() {

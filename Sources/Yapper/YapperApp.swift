@@ -23,6 +23,7 @@ struct YapperApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var menuBarController: MenuBarController?
+    let updaterController = UpdaterController()
     private var recordingObserver: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -57,6 +58,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     print("🚀 Closed window: \(window.title)")
                 }
             }
+
+            // Setup auto-updater
+            AppState.shared.updaterController = self?.updaterController
 
             // Setup menubar
             print("🚀 About to setup menubar...")
@@ -199,7 +203,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             print("❌ No button available on statusItem")
         }
 
-        menuBarController = MenuBarController(statusItem: statusItem)
+        menuBarController = MenuBarController(statusItem: statusItem, updaterController: updaterController)
         print("📍 MenuBarController created")
     }
 
@@ -224,6 +228,7 @@ class AppState: ObservableObject {
     @Published var isRecording = false
     @Published var processingState: ProcessingState = .idle
     @Published var settings: Settings = Settings()
+    var updaterController: UpdaterController?
 
     var currentMode: Mode {
         get {

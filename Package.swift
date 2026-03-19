@@ -13,7 +13,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        // Add dependencies here as needed
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0")
     ],
     targets: [
         .systemLibrary(
@@ -22,7 +22,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "Yapper",
-            dependencies: ["CWhisper"],
+            dependencies: ["CWhisper", "Sparkle"],
             path: "Sources/Yapper",
             exclude: [
                 "Resources/Info.plist"

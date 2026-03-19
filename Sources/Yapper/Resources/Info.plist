@@ -15,9 +15,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>0.2.1</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIconName</key>
@@ -72,6 +72,12 @@
             </array>
         </dict>
     </array>
+
+    <!-- Sparkle Auto-Update -->
+    <key>SUPublicEDKey</key>
+    <string>9tRw86jUx96sW8y1DhYeoquLjO430hbGmFHb+B/X+WE=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
 
     <!-- Sandboxing disabled for MVP (enable for App Store) -->
     <!-- <key>com.apple.security.app-sandbox</key> -->

@@ -51,6 +51,16 @@ for dylib in "${DYLIBS[@]}"; do
     fi
 done
 
+# Step 6b: Copy Sparkle framework
+echo "📚 Copying Sparkle framework..."
+SPARKLE_FRAMEWORK=$(find "$PROJECT_DIR/.build/artifacts" -name "Sparkle.framework" -type d 2>/dev/null | head -1)
+if [ -n "$SPARKLE_FRAMEWORK" ]; then
+    cp -R "$SPARKLE_FRAMEWORK" "$APP_BUNDLE/Contents/Frameworks/"
+    echo "  Copied from: $SPARKLE_FRAMEWORK"
+else
+    echo "⚠️ Sparkle.framework not found in .build/artifacts - update checking will not work"
+fi
+
 # Step 7: Copy Metal shader
 echo "⚙️ Copying Metal shader..."
 if [ -f "$WHISPER_BUILD/bin/ggml-metal.metal" ]; then
@@ -146,6 +156,22 @@ for dylib in "$FRAMEWORKS_DIR"/*.dylib; do
         codesign --force --sign "$SIGN_IDENTITY" --timestamp "$dylib"
     fi
 done
+
+# Sign Sparkle framework components (inner-most first)
+if [ -d "$FRAMEWORKS_DIR/Sparkle.framework" ]; then
+    echo "🔐 Signing Sparkle framework..."
+    SPARKLE_DIR="$FRAMEWORKS_DIR/Sparkle.framework/Versions/B"
+    for component in \
+        "$SPARKLE_DIR/XPCServices/Installer.xpc" \
+        "$SPARKLE_DIR/XPCServices/Downloader.xpc" \
+        "$SPARKLE_DIR/Updater.app" \
+        "$SPARKLE_DIR/Autoupdate"; do
+        if [ -e "$component" ]; then
+            codesign --force --sign "$SIGN_IDENTITY" --timestamp "$component"
+        fi
+    done
+    codesign --force --sign "$SIGN_IDENTITY" --timestamp "$FRAMEWORKS_DIR/Sparkle.framework"
+fi
 
 # Sign the app bundle (without --deep to avoid corrupting inner signatures)
 codesign --force --sign "$SIGN_IDENTITY" \
