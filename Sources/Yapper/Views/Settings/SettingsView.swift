@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import ServiceManagement
 
 // Shared state between sidebar and detail
 class SettingsViewState: ObservableObject {
@@ -118,7 +119,22 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section("Startup") {
-                Toggle("Start at login", isOn: $appState.settings.startAtLogin)
+                Toggle("Start at login", isOn: Binding(
+                    get: { SMAppService.mainApp.status == .enabled },
+                    set: { enable in
+                        do {
+                            if enable {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
+                            }
+                            appState.settings.startAtLogin = enable
+                            appState.saveSettings()
+                        } catch {
+                            print("⚠️ Failed to \(enable ? "enable" : "disable") login item: \(error)")
+                        }
+                    }
+                ))
                 Toggle("Show in Dock", isOn: Binding(
                     get: { appState.settings.showInDock },
                     set: { show in

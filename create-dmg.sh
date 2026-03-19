@@ -3,7 +3,7 @@ set -e
 
 APP_NAME="Yapper"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VERSION="0.3.0"
+VERSION="0.3.1"
 DIST_DIR="$PROJECT_DIR/dist"
 DMG_DIR="$DIST_DIR/dmg-staging"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
