@@ -52,14 +52,19 @@ class WhisperService {
     private func loadModel(_ model: WhisperModel) async throws {
         print("📦 Loading \(model.rawValue) model...")
 
-        // Check if model exists locally
-        let modelURL = modelURL(for: model)
-        if !FileManager.default.fileExists(atPath: modelURL.path) {
-            throw WhisperError.modelNotFound(model)
+        let modelFileURL = modelURL(for: model)
+
+        // Auto-download if not present
+        if !FileManager.default.fileExists(atPath: modelFileURL.path) {
+            print("⬇️ Model not found locally, downloading...")
+            await MainActor.run {
+                RecordingCoordinator.shared.state = .downloadingModel
+            }
+            try await downloadModel(model) { _ in }
         }
 
         // Load model using bridge
-        try bridge?.loadModel(path: modelURL.path)
+        try bridge?.loadModel(path: modelFileURL.path)
 
         loadedModel = model
         print("✓ Model loaded: \(model.rawValue)")

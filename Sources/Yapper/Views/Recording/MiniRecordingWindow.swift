@@ -56,7 +56,7 @@ struct MiniRecordingWindow: View {
             return .gray
         case .recording:
             return .red
-        case .transcribing, .processing:
+        case .downloadingModel, .transcribing, .processing:
             return .blue
         case .inserting:
             return .green

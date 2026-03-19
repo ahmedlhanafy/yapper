@@ -23,7 +23,7 @@ struct CompactRecordingWindowContent: View {
     private var isActive: Bool { appState.isRecording || isDemoMode }
 
     private var isProcessing: Bool {
-        coordinator.state == .processing || coordinator.state == .transcribing
+        coordinator.state == .processing || coordinator.state == .transcribing || coordinator.state == .downloadingModel
     }
 
     private var waveformColor: Color {
@@ -66,7 +66,7 @@ struct CompactRecordingWindowContent: View {
                         .foregroundColor(silverLight)
                         .opacity(brainOpacity)
                         .shadow(color: silverLight.opacity(0.3), radius: 3)
-                    Text(coordinator.state == .transcribing ? "..." : "AI")
+                    Text(coordinator.state == .downloadingModel ? "DL" : coordinator.state == .transcribing ? "..." : "AI")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(silverLight.opacity(0.7))
                 }
@@ -107,7 +107,7 @@ struct CompactRecordingWindowContent: View {
             updateWaveform(level: level)
         }
         .onChange(of: coordinator.state) { newState in
-            if newState == .processing || newState == .transcribing {
+            if newState == .processing || newState == .transcribing || newState == .downloadingModel {
                 withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                     shimmerRotation = 360
                 }

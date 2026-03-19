@@ -88,7 +88,7 @@ struct Settings: Codable {
 
         self.ollamaBaseURL = "http://localhost:11434"
 
-        self.showToastNotifications = true
+        self.showToastNotifications = false
         self.demoMode = false
     }
 

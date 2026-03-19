@@ -253,6 +253,7 @@ class AppState: ObservableObject {
 enum ProcessingState: Equatable {
     case idle
     case recording
+    case downloadingModel
     case transcribing
     case processing
     case inserting

@@ -73,7 +73,7 @@ struct RecordingWindowContent: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 18)
                         .padding(.bottom, 12)
-                } else if coordinator.state == .processing || coordinator.state == .transcribing {
+                } else if coordinator.state == .processing || coordinator.state == .transcribing || coordinator.state == .downloadingModel {
                     processingOverlay
                         .padding(.horizontal, 20)
                         .padding(.top, 18)
@@ -93,7 +93,7 @@ struct RecordingWindowContent: View {
             }
 
             // Border — shimmer when processing, static otherwise
-            if coordinator.state == .processing || coordinator.state == .transcribing {
+            if coordinator.state == .processing || coordinator.state == .transcribing || coordinator.state == .downloadingModel {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .strokeBorder(
                         AngularGradient(
@@ -128,7 +128,7 @@ struct RecordingWindowContent: View {
             updateWaveform(level: level)
         }
         .onChange(of: coordinator.state) { newState in
-            if newState == .processing || newState == .transcribing {
+            if newState == .processing || newState == .transcribing || newState == .downloadingModel {
                 withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                     shimmerRotation = 360
                 }
@@ -311,11 +311,11 @@ struct RecordingWindowContent: View {
                 }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(coordinator.state == .transcribing ? "Transcribing..." : "Thinking...")
+                Text(coordinator.state == .downloadingModel ? "Downloading model..." : coordinator.state == .transcribing ? "Transcribing..." : "Thinking...")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(warmWhite)
 
-                Text(coordinator.state == .transcribing ? "Converting speech to text" : "Processing with AI")
+                Text(coordinator.state == .downloadingModel ? "First time setup, one moment" : coordinator.state == .transcribing ? "Converting speech to text" : "Processing with AI")
                     .font(.system(size: 11))
                     .foregroundColor(warmWhite.opacity(0.5))
             }
