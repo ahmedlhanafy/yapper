@@ -7,6 +7,26 @@
     <language>en</language>
 
     <item>
+      <title>Version 0.3.1</title>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>0.3.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.3.1</h2>
+        <ul>
+          <li>Start at login now works</li>
+        </ul>
+      ]]></description>
+      <pubDate>Wed, 19 Mar 2026 00:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/ahmedlhanafy/yapper/releases/download/v0.3.1/Yapper-0.3.1-intel.dmg"
+        sparkle:edSignature="L/4Sramf9yTt9vqCHU+PoWpFR7cYQpCWv3u2l81JyaM+56rCQroOZngvtsJzMevSLaGgOqm0aIlKt/uy3jLEBw=="
+        length="5674920"
+        type="application/octet-stream"
+      />
+    </item>
+
+    <item>
       <title>Version 0.2.1</title>
       <sparkle:version>2</sparkle:version>
       <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
