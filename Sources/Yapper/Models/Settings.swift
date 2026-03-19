@@ -74,7 +74,7 @@ struct Settings: Codable {
         self.recordingWindowStyle = .classic
 
         self.recordingHotkey = Hotkey(keyCode: 49, modifiers: [.option]) // Option+Space
-        self.cycleModeHotkey = Hotkey(keyCode: 43, modifiers: [.command, .shift]) // Cmd+Shift+,
+        self.cycleModeHotkey = Hotkey(keyCode: 49, modifiers: [.option, .shift]) // Option+Shift+Space
 
         self.inputDevice = nil
         self.enableNormalization = true
