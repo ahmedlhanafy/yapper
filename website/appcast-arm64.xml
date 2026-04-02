@@ -7,6 +7,27 @@
     <language>en</language>
 
     <item>
+      <title>Version 0.3.3</title>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>0.3.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.3.3</h2>
+        <ul>
+          <li>Add base system prompt to prevent instruction injection in transcribed text</li>
+          <li>All AI modes now inherit core guardrails for safer processing</li>
+        </ul>
+      ]]></description>
+      <pubDate>Wed, 02 Apr 2026 00:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/ahmedlhanafy/yapper/releases/download/v0.3.3/Yapper-0.3.3-apple-silicon.dmg"
+        sparkle:edSignature="UpPVMRlIfud1NjG1zs+NqfnhEdSS6z02Tq3A0ZWNLgDgp/T7aiRXByyvG6Pn3TfqXRfupcHXpNXgsnzZzwZvAw=="
+        length="5682868"
+        type="application/octet-stream"
+      />
+    </item>
+
+    <item>
       <title>Version 0.2.1</title>
       <sparkle:version>2</sparkle:version>
       <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
